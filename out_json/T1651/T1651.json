@@ -1,0 +1,58 @@
+{
+  "attack_technique": "T1651",
+  "display_name": "Cloud Administration Command",
+  "atomic_tests": [
+    {
+      "name": "AWS Run Command (and Control)",
+      "description": "This test simulates an adversary using the AWS Run Command service to execute commands on EC2 instances.",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Import-Module \"PathToAtomicsFolder/T1651/src/T1651-1/AWSSSMAttack.ps1\" -Force\n$access_key = \"#{access_key}\"\n$secret_key = \"#{secret_key}\"\n$session_token = \"#{session_token}\"\n$aws_profile = \"#{profile}\"\n$region = \"#{region}\"\nSet-AWSAuthentication -AccessKey $access_key -SecretKey $secret_key -SessionToken $session_token -AWSProfile $aws_profile -AWSRegion $region\nInvoke-Terraform -TerraformCommand init -TerraformDirectory \"PathToAtomicsFolder/T1651/src/T1651-1\"\nInvoke-Terraform -TerraformCommand apply -TerraformDirectory \"PathToAtomicsFolder/T1651/src/T1651-1\" -TerraformVariables @(\"profile=T1651-1\", \"region=$region\")\nInvoke-SSMAttack -AWSProfile \"T1651-1\" -TerraformDirectory \"PathToAtomicsFolder/T1651/src/T1651-1\"\nInvoke-Terraform -TerraformCommand destroy -TerraformDirectory \"PathToAtomicsFolder/T1651/src/T1651-1\" -TerraformVariables @(\"profile=T1651-1\", \"region=$region\")"
+      },
+      "input_arguments": {
+        "access_key": {
+          "description": "AWS Access Key",
+          "type": "string",
+          "default": null
+        },
+        "secret_key": {
+          "description": "AWS Secret Key",
+          "type": "string",
+          "default": null
+        },
+        "session_token": {
+          "description": "AWS Session Token",
+          "type": "string",
+          "default": null
+        },
+        "profile": {
+          "description": "AWS profile",
+          "type": "string",
+          "default": null
+        },
+        "region": {
+          "description": "AWS region to deploy the EC2 instance",
+          "type": "string",
+          "default": "us-east-2"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The AWS PowerShell module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name AWSPowerShell -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AWSPowerShell -Force"
+        },
+        {
+          "description": "Terraform must be installed.",
+          "prereq_command": "terraform --version",
+          "get_prereq_command": "Write-Host \"Terraform is required. Download it from https://www.terraform.io/downloads.html\""
+        }
+      ],
+      "auto_generated_guid": "a3cc9c95-c160-4b86-af6f-84fba87bfd30"
+    }
+  ]
+}

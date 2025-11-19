@@ -3,6 +3,9 @@
 .vscode
 .atom
 
+venv/
+toon-python/
+
 atomic-red-team/enterprise-attack.json
 
 # Compiled Object files

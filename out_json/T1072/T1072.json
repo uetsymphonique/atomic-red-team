@@ -1,0 +1,93 @@
+{
+  "attack_technique": "T1072",
+  "display_name": "Software Deployment Tools",
+  "atomic_tests": [
+    {
+      "name": "Radmin Viewer Utility",
+      "description": "An adversary may use Radmin Viewer Utility to remotely control Windows device, this will start the radmin console.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "command": "\"%PROGRAMFILES(x86)%/#{radmin_exe}\""
+      },
+      "input_arguments": {
+        "radmin_installer": {
+          "description": "Radmin Viewer installer",
+          "type": "path",
+          "default": "RadminViewer.msi"
+        },
+        "radmin_exe": {
+          "description": "The radmin.exe executable from RadminViewer.msi",
+          "type": "path",
+          "default": "Radmin Viewer 3/Radmin.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Radmin Viewer Utility must be installed at specified location (#{radmin_exe})",
+          "prereq_command": "if (Test-Path \"${env:ProgramFiles(x86)}/#{radmin_exe}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host Downloading radmin installer\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://www.radmin.com/download/Radmin_Viewer_3.5.2.1_EN.msi\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\#{radmin_installer}\"\nWrite-Host Install Radmin\nStart-Process msiexec  -Wait -ArgumentList /i , \"PathToAtomicsFolder\\..\\ExternalPayloads\\#{radmin_installer}\", /qn"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "b4988cad-6ed2-434d-ace5-ea2670782129"
+    },
+    {
+      "name": "PDQ Deploy RAT",
+      "description": "An adversary may use PDQ Deploy Software to deploy the Remote Adminstartion Tool, this will start the PDQ console.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "command": "\"%PROGRAMFILES(x86)%/#{PDQ_Deploy_exe}\""
+      },
+      "input_arguments": {
+        "PDQ_Deploy_installer": {
+          "description": "PDQ Deploy Install",
+          "type": "path",
+          "default": "PDQDeploysetup.exe"
+        },
+        "PDQ_Deploy_exe": {
+          "description": "The PDQDeployConsole.exe executable from PDQDeploysetup.exe",
+          "type": "path",
+          "default": "Admin Arsenal/PDQ Deploy/PDQDeployConsole.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "PDQ Deploy will be installed at specified location (#{PDQ_Deploy_exe})",
+          "prereq_command": "if (Test-Path \"${env:ProgramFiles(x86)}/#{PDQ_Deploy_exe}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host Downloading PDQ Deploy installer\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.pdq.com/release/19/Deploy_19.3.350.0.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\#{PDQ_Deploy_installer}\"\nWrite-Host Install PDQ Deploy\nStart-Process \"PathToAtomicsFolder\\..\\ExternalPayloads\\#{PDQ_Deploy_installer}\" -Wait -ArgumentList \"/s\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "e447b83b-a698-4feb-bed1-a7aaf45c3443"
+    },
+    {
+      "name": "Deploy 7-Zip Using Chocolatey",
+      "description": "An adversary may use Chocolatey to remotely deploy the 7-Zip file archiver utility.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "# Deploy 7-Zip using Chocolatey\nchoco install -y 7zip"
+      },
+      "input_arguments": {},
+      "dependencies": [
+        {
+          "description": "Chocolatey must be installed to deploy 7-Zip.",
+          "prereq_command": "if (Test-Path \"${env:ProgramFiles(x86)}\\Chocolatey\\choco.exe\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host Downloading Chocolatey installer\nInvoke-WebRequest -Uri \"https://chocolatey.org/install.ps1\" -OutFile \"chocolatey-install.ps1\"\nWrite-Host Installing Chocolatey\nStart-Process -FilePath \"powershell.exe\" -ArgumentList \"-NoProfile -ExecutionPolicy Bypass -File chocolatey-install.ps1\" -Wait"
+        }
+      ],
+      "auto_generated_guid": "2169e8b0-2ee7-44cb-8a6e-d816a5db7d8a"
+    }
+  ]
+}

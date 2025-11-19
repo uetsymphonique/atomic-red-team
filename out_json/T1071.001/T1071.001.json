@@ -1,0 +1,80 @@
+{
+  "attack_technique": "T1071.001",
+  "display_name": "Application Layer Protocol: Web Protocols",
+  "atomic_tests": [
+    {
+      "name": "Malicious User Agents - Powershell",
+      "description": "This test simulates an infected host beaconing to command and control. Upon execution, no output will be displayed. \nUse an application such as Wireshark to record the session and observe user agent strings and responses.\n\nInspired by APTSimulator - https://github.com/NextronSystems/APTSimulator/blob/master/test-sets/command-and-control/malicious-user-agents.bat",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Invoke-WebRequest #{domain} -UserAgent \"HttpBrowser/1.0\" | out-null\nInvoke-WebRequest #{domain} -UserAgent \"Wget/1.9+cvs-stable (Red Hat modified)\" | out-null\nInvoke-WebRequest #{domain} -UserAgent \"Opera/8.81 (Windows NT 6.0; U; en)\" | out-null\nInvoke-WebRequest #{domain} -UserAgent \"*<|>*\" | out-null"
+      },
+      "input_arguments": {
+        "domain": {
+          "description": "Default domain to simulate against",
+          "type": "string",
+          "default": "www.google.com"
+        }
+      },
+      "auto_generated_guid": "81c13829-f6c9-45b8-85a6-053366d55297"
+    },
+    {
+      "name": "Malicious User Agents - CMD",
+      "description": "This test simulates an infected host beaconing to command and control. Upon execution, no out put will be displayed. \nUse an application such as Wireshark to record the session and observe user agent strings and responses.\n\nInspired by APTSimulator - https://github.com/NextronSystems/APTSimulator/blob/master/test-sets/command-and-control/malicious-user-agents.bat",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "#{curl_path} -s -A \"HttpBrowser/1.0\" -m3 #{domain} >nul 2>&1\n#{curl_path} -s -A \"Wget/1.9+cvs-stable (Red Hat modified)\" -m3 #{domain} >nul 2>&1\n#{curl_path} -s -A \"Opera/8.81 (Windows NT 6.0; U; en)\" -m3 #{domain} >nul 2>&1\n#{curl_path} -s -A \"*<|>*\" -m3 #{domain} >nul 2>&1"
+      },
+      "input_arguments": {
+        "domain": {
+          "description": "Default domain to simulate against",
+          "type": "string",
+          "default": "www.google.com"
+        },
+        "curl_path": {
+          "description": "path to curl.exe",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\Curl.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Curl must be installed on system",
+          "prereq_command": "if (Test-Path #{curl_path}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://curl.se/windows/dl-8.6.0_2/curl-8.6.0_2-win32-mingw.zip\" -Outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\curl.zip\"\nExpand-Archive -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\curl.zip\" -DestinationPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\curl\"\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\curl\\curl-8.6.0_2-win32-mingw\\bin\\curl.exe\" #{curl_path}\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\curl\"\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\curl.zip\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "dc3488b0-08c7-4fea-b585-905c83b48180"
+    },
+    {
+      "name": "Malicious User Agents - Nix",
+      "description": "This test simulates an infected host beaconing to command and control.\nInspired by APTSimulator - https://github.com/NextronSystems/APTSimulator/blob/master/test-sets/command-and-control/malicious-user-agents.bat",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "curl -s -A \"HttpBrowser/1.0\" -m3 #{domain}\ncurl -s -A \"Wget/1.9+cvs-stable (Red Hat modified)\" -m3 #{domain}\ncurl -s -A \"Opera/8.81 (Windows NT 6.0; U; en)\" -m3 #{domain}\ncurl -s -A \"*<|>*\" -m3 #{domain}"
+      },
+      "input_arguments": {
+        "domain": {
+          "description": "Default domain to simulate against",
+          "type": "string",
+          "default": "www.google.com"
+        }
+      },
+      "auto_generated_guid": "2d7c471a-e887-4b78-b0dc-b0df1f2e0658"
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "attack_technique": "T1202",
+  "display_name": "Indirect Command Execution",
+  "atomic_tests": [
+    {
+      "name": "Indirect Command Execution - pcalua.exe",
+      "description": "The Program Compatibility Assistant (pcalua.exe) may invoke the execution of programs and commands from a Command-Line Interface.\n[Reference](https://twitter.com/KyleHanslovan/status/912659279806640128)\nUpon execution, calc.exe should open",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "pcalua.exe -a #{process}\npcalua.exe -a #{payload_path}"
+      },
+      "input_arguments": {
+        "payload_path": {
+          "description": "Path to payload",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\calc.exe"
+        },
+        "process": {
+          "description": "Process to execute",
+          "type": "string",
+          "default": "calc.exe"
+        }
+      },
+      "auto_generated_guid": "cecfea7a-5f03-4cdd-8bc8-6f7c22862440"
+    },
+    {
+      "name": "Indirect Command Execution - forfiles.exe",
+      "description": "forfiles.exe may invoke the execution of programs and commands from a Command-Line Interface.\n[Reference](https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSBinaries/Forfiles.yml)\n\"This is basically saying for each occurrence of notepad.exe in c:\\windows\\system32 run calc.exe\"\nUpon execution calc.exe will be opened.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "forfiles /p c:\\windows\\system32 /m notepad.exe /c #{process}"
+      },
+      "input_arguments": {
+        "process": {
+          "description": "Process to execute",
+          "type": "string",
+          "default": "calc.exe"
+        }
+      },
+      "auto_generated_guid": "8b34a448-40d9-4fc3-a8c8-4bb286faf7dc"
+    },
+    {
+      "name": "Indirect Command Execution - conhost.exe",
+      "description": "conhost.exe refers to a host process for the console window. It provide an interface between command prompt and Windows explorer.\nExecuting it through command line can create process ancestry anomalies\n[Reference] (http://www.hexacorn.com/blog/2020/05/25/how-to-con-your-host/)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "conhost.exe \"#{process}\""
+      },
+      "input_arguments": {
+        "process": {
+          "description": "Process to execute",
+          "type": "string",
+          "default": "notepad.exe"
+        }
+      },
+      "auto_generated_guid": "cf3391e0-b482-4b02-87fc-ca8362269b29"
+    },
+    {
+      "name": "Indirect Command Execution - Scriptrunner.exe",
+      "description": "The \"ScriptRunner.exe\" binary can be abused to proxy execution through it and bypass possible whitelisting. Upon test execution, calc.exe should open\nReference: https://x.com/NickTyrer/status/914234924655312896",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Scriptrunner.exe -appvscript \"#{payload_path}\""
+      },
+      "input_arguments": {
+        "payload_path": {
+          "description": "Path to the executable",
+          "type": "String",
+          "default": "C:\\Windows\\System32\\calc.exe"
+        }
+      },
+      "auto_generated_guid": "0fd14730-6226-4f5e-8d67-43c65f1be940"
+    },
+    {
+      "name": "Indirect Command Execution - RunMRU Dialog",
+      "description": "Simulates execution of commands via the Windows Run dialog (Win+R) by programmatically opening the Run dialog, \ncopying a command to clipboard, and automating the paste and execution. This generates artifacts in the RunMRU registry key,\nwhich is commonly abused by threat actors to execute malicious commands disguised as CAPTCHA verification steps.\nUpon execution, a test PowerShell command will be executed through the Run dialog.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "# Copy command to clipboard\nSet-Clipboard -Value '#{command}'\n\n# Open Run dialog\nStart-Process -FilePath \"powershell\" -ArgumentList \"-c (New-Object -ComObject 'Shell.Application').FileRun()\" -WindowStyle Hidden\n\n# Wait for Run dialog to open\nStart-Sleep -Seconds 1\n\n# Paste command and execute\nAdd-Type -AssemblyName System.Windows.Forms\n[System.Windows.Forms.SendKeys]::SendWait('^v')\nStart-Sleep -Milliseconds 500\n[System.Windows.Forms.SendKeys]::SendWait('{ENTER}')"
+      },
+      "input_arguments": {
+        "command": {
+          "description": "Command to execute via Run dialog",
+          "type": "string",
+          "default": "calc.exe"
+        }
+      },
+      "auto_generated_guid": "de323a93-2f18-4bd5-ba60-d6fca6aeff76"
+    }
+  ]
+}

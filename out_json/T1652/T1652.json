@@ -1,0 +1,20 @@
+{
+  "attack_technique": "T1652",
+  "display_name": "Device Driver Discovery",
+  "atomic_tests": [
+    {
+      "name": "Device Driver Discovery",
+      "description": "Displays a list of installed device drivers on the local computer and their properties. Threat actors use this command to enumerate the existing drivers on the computer. \nParameters: \n/v /fo list - Displays verbose output in a list format - the /v parameter is not valid for signed drivers\n/si /fo list - Provides information about signed drivers and outputs it in a list format",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "driverquery /v /fo list\ndriverquery /si /fo list"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "235b30a2-e5b1-441f-9705-be6231c88ddd"
+    }
+  ]
+}

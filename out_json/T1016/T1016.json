@@ -1,0 +1,192 @@
+{
+  "attack_technique": "T1016",
+  "display_name": "System Network Configuration Discovery",
+  "atomic_tests": [
+    {
+      "name": "System Network Configuration Discovery on Windows",
+      "description": "Identify network configuration information\n\nUpon successful execution, cmd.exe will spawn multiple commands to list network configuration settings. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "ipconfig /all\nnetsh interface show interface\narp -a\nnbtstat -n\nnet config"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "970ab6a1-0157-4f3f-9a73-ec4166754b23"
+    },
+    {
+      "name": "List Windows Firewall Rules",
+      "description": "Enumerates Windows Firewall Rules using netsh.\n\nUpon successful execution, cmd.exe will spawn netsh.exe to list firewall rules. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "netsh advfirewall firewall show rule name=all"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "038263cb-00f4-4b0a-98ae-0696c67e1752"
+    },
+    {
+      "name": "System Network Configuration Discovery",
+      "description": "Identify network configuration information.\nUpon successful execution, sh will spawn multiple commands and output will be via stdout.",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "if [ \"$(uname)\" = 'FreeBSD' ]; then cmd=\"netstat -Sp tcp\"; else cmd=\"netstat -ant\"; fi;\nif [ -x \"$(command -v arp)\" ]; then arp -a; else echo \"arp is missing from the machine. skipping...\"; fi;\nif [ -x \"$(command -v ifconfig)\" ]; then ifconfig; else echo \"ifconfig is missing from the machine. skipping...\"; fi;\nif [ -x \"$(command -v ip)\" ]; then ip addr; else echo \"ip is missing from the machine. skipping...\"; fi;\nif [ -x \"$(command -v netstat)\" ]; then $cmd | awk '{print $NF}' | grep -v '[[:lower:]]' | sort | uniq -c; else echo \"netstat is missing from the machine. skipping...\"; fi;"
+      },
+      "input_arguments": {},
+      "dependencies": [
+        {
+          "description": "Check if arp command exists on the machine",
+          "prereq_command": "if [ -x \"$(command -v arp)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "(which yum && yum -y install net-tools)||(which apt-get && DEBIAN_FRONTEND=noninteractive apt-get install -y net-tools)"
+        }
+      ],
+      "auto_generated_guid": "c141bbdb-7fca-4254-9fd6-f47e79447e17"
+    },
+    {
+      "name": "System Network Configuration Discovery (TrickBot Style)",
+      "description": "Identify network configuration information as seen by Trickbot and described here https://www.sneakymonkey.net/2019/10/29/trickbot-analysis-part-ii/\n\nUpon successful execution, cmd.exe will spawn `ipconfig /all`, `net config workstation`, `net view /all /domain`, `nltest /domain_trusts`. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "ipconfig /all\nnet config workstation\nnet view /all /domain\nnltest /domain_trusts"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "dafaf052-5508-402d-bf77-51e0700c02e2"
+    },
+    {
+      "name": "List Open Egress Ports",
+      "description": "This is to test for what ports are open outbound.  The technique used was taken from the following blog:\nhttps://www.blackhillsinfosec.com/poking-holes-in-the-firewall-egress-testing-with-allports-exposed/\n\nUpon successful execution, powershell will read top-128.txt (ports) and contact each port to confirm if open or not. Output will be to Desktop\\open-ports.txt.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$ports = Get-content \"#{port_file}\"\n$file = \"#{output_file}\"\n$totalopen = 0\n$totalports = 0\nNew-Item $file -Force\nforeach ($port in $ports) {\n    $test = new-object system.Net.Sockets.TcpClient\n    $wait = $test.beginConnect(\"allports.exposed\", $port, $null, $null)\n    $wait.asyncwaithandle.waitone(250, $false) | Out-Null\n    $totalports++ | Out-Null\n    if ($test.Connected) {\n        $result = \"$port open\" \n        Write-Host -ForegroundColor Green $result\n        $result | Out-File -Encoding ASCII -append $file\n        $totalopen++ | Out-Null\n    }\n    else {\n        $result = \"$port closed\" \n        Write-Host -ForegroundColor Red $result\n        $totalclosed++ | Out-Null\n        $result | Out-File -Encoding ASCII -append $file\n    }\n}\n$results = \"There were a total of $totalopen open ports out of $totalports ports tested.\"\n$results | Out-File -Encoding ASCII -append $file\nWrite-Host $results",
+        "cleanup_command": "Remove-Item -ErrorAction ignore \"#{output_file}\""
+      },
+      "input_arguments": {
+        "output_file": {
+          "description": "Path of file to write port scan results",
+          "type": "path",
+          "default": "$env:USERPROFILE\\Desktop\\open-ports.txt"
+        },
+        "portfile_url": {
+          "description": "URL to top-128.txt",
+          "type": "url",
+          "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1016/src/top-128.txt"
+        },
+        "port_file": {
+          "description": "The path to a text file containing ports to be scanned, one port per line. The default list uses the top 128 ports as defined by Nmap.",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1016\\src\\top-128.txt"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Test requires #{port_file} to exist",
+          "prereq_command": "if (Test-Path \"#{port_file}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{port_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"#{portfile_url}\" -OutFile \"#{port_file}\""
+        }
+      ],
+      "auto_generated_guid": "4b467538-f102-491d-ace7-ed487b853bf5"
+    },
+    {
+      "name": "Adfind - Enumerate Active Directory Subnet Objects",
+      "description": "Adfind tool can be used for reconnaissance in an Active directory environment. This example has been documented by ransomware actors enumerating Active Directory Subnet Objects\nreference- http://www.joeware.net/freetools/tools/adfind/, https://www.fireeye.com/blog/threat-research/2019/04/pick-six-intercepting-a-fin6-intrusion.html",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\" -f (objectcategory=subnet) #{optional_args}"
+      },
+      "input_arguments": {
+        "optional_args": {
+          "description": "Allows defining arguments to add to the adfind command to tailor it to the specific needs of the environment. Use \"-arg\" notation to add arguments separated by spaces.",
+          "type": "string",
+          "default": null
+        }
+      },
+      "dependencies": [
+        {
+          "description": "AdFind.exe must exist on disk at specified location (PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe)",
+          "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1087.002/bin/AdFind.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\AdFind.exe\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "9bb45dd7-c466-4f93-83a1-be30e56033ee"
+    },
+    {
+      "name": "Qakbot Recon",
+      "description": "A list of commands known to be performed by Qakbot for recon purposes",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "\"#{recon_commands}\""
+      },
+      "input_arguments": {
+        "recon_commands": {
+          "description": "File that houses list of commands to be executed",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1016\\src\\qakbot.bat"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "File to copy must exist on disk at specified location (#{recon_commands})",
+          "prereq_command": "if (Test-Path \"#{recon_commands}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{recon_commands}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1016/src/qakbot.bat\" -OutFile \"#{recon_commands}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "121de5c6-5818-4868-b8a7-8fd07c455c1b"
+    },
+    {
+      "name": "List macOS Firewall Rules",
+      "description": "\"This will test if the macOS firewall is enabled and/or show what rules are configured. Must be run with elevated privileges. Upon successful execution, these commands will output various information about the firewall configuration, including status and specific port/protocol blocks or allows. \n\nUsing `defaults`, additional arguments can be added to see filtered details, such as `globalstate` for global configuration (\\\"Is it on or off?\\\"), `firewall` for common application allow rules, and `explicitauths` for specific rules configured by the user. \n\nUsing `socketfilterfw`, flags such as --getglobalstate or --listapps can be used for similar filtering. At least one flag is required to send parseable output to standard out.",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "command": "sudo defaults read /Library/Preferences/com.apple.alf\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "ff1d8c25-2aa4-4f18-a425-fede4a41ee88"
+    },
+    {
+      "name": "DNS Server Discovery Using nslookup",
+      "description": "Identify System domain dns controller on an endpoint using nslookup ldap query. This tool is being abused by qakbot malware to gather information on the domain\ncontroller of the targeted or compromised host. reference https://securelist.com/qakbot-technical-analysis/103931/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "nslookup -querytype=ALL -timeout=12 _ldap._tcp.dc._msdcs.%USERDNSDOMAIN%"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "34557863-344a-468f-808b-a1bfb89b4fa9"
+    }
+  ]
+}

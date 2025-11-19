@@ -1,0 +1,265 @@
+{
+  "attack_technique": "T1070.004",
+  "display_name": "Indicator Removal on Host: File Deletion",
+  "atomic_tests": [
+    {
+      "name": "Delete a single file - FreeBSD/Linux/macOS",
+      "description": "Delete a single file from the temporary directory",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "rm -f #{file_to_delete}",
+        "cleanup_command": "rm -rf #{parent_folder}"
+      },
+      "input_arguments": {
+        "parent_folder": {
+          "description": "Path of parent folder",
+          "type": "path",
+          "default": "/tmp/victim-files/"
+        },
+        "file_to_delete": {
+          "description": "Path of file to delete",
+          "type": "path",
+          "default": "/tmp/victim-files/T1070.004-test.txt"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The file must exist in order to be deleted",
+          "prereq_command": "test -e #{file_to_delete} && exit 0 || exit 1",
+          "get_prereq_command": "mkdir -p #{parent_folder} && touch #{file_to_delete}"
+        }
+      ],
+      "auto_generated_guid": "562d737f-2fc6-4b09-8c2a-7f8ff0828480"
+    },
+    {
+      "name": "Delete an entire folder - FreeBSD/Linux/macOS",
+      "description": "Recursively delete the temporary directory and all files contained within it",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "rm -rf #{folder_to_delete}"
+      },
+      "input_arguments": {
+        "folder_to_delete": {
+          "description": "Path of folder to delete",
+          "type": "path",
+          "default": "/tmp/victim-folder"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The folder must exist in order to be deleted",
+          "prereq_command": "test -e #{folder_to_delete} && exit 0 || exit 1",
+          "get_prereq_command": "mkdir -p #{folder_to_delete}"
+        }
+      ],
+      "auto_generated_guid": "a415f17e-ce8d-4ce2-a8b4-83b674e7017e"
+    },
+    {
+      "name": "Overwrite and delete a file with shred",
+      "description": "Use the `shred` command to overwrite the temporary file and then delete it",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "shred -u #{file_to_shred}"
+      },
+      "input_arguments": {
+        "file_to_shred": {
+          "description": "Path of file to shred",
+          "type": "path",
+          "default": "/tmp/victim-shred.txt"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Check if file already exists",
+          "prereq_command": "if [ -f \"#{file_to_shred}\" ]; then echo \"File already exists\"; else echo \"File does NOT exist yet\"; exit 1; fi",
+          "get_prereq_command": "touch #{file_to_shred}"
+        }
+      ],
+      "auto_generated_guid": "039b4b10-2900-404b-b67f-4b6d49aa6499"
+    },
+    {
+      "name": "Delete a single file - Windows cmd",
+      "description": "Delete a single file from the temporary directory using cmd.exe.\nUpon execution, no output will be displayed. Use File Explorer to verify the file was deleted.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "del /f #{file_to_delete}"
+      },
+      "input_arguments": {
+        "file_to_delete": {
+          "description": "File to delete. Run the prereq command to create it if it does not exist.",
+          "type": "string",
+          "default": "%temp%\\deleteme_T1551.004"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The file to delete must exist on disk at specified location (#{file_to_delete})",
+          "prereq_command": "IF EXIST \"#{file_to_delete}\" ( EXIT 0 ) ELSE ( EXIT 1 )",
+          "get_prereq_command": "echo deleteme_T1551.004 >> #{file_to_delete}"
+        }
+      ],
+      "auto_generated_guid": "861ea0b4-708a-4d17-848d-186c9c7f17e3"
+    },
+    {
+      "name": "Delete an entire folder - Windows cmd",
+      "description": "Recursively delete a folder in the temporary directory using cmd.exe.\nUpon execution, no output will be displayed. Use File Explorer to verify the folder was deleted.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "rmdir /s /q #{folder_to_delete}"
+      },
+      "input_arguments": {
+        "folder_to_delete": {
+          "description": "Folder to delete. Run the prereq command to create it if it does not exist.",
+          "type": "string",
+          "default": "%temp%\\deleteme_T1551.004"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The file to delete must exist on disk at specified location (#{folder_to_delete})",
+          "prereq_command": "IF EXIST \"#{folder_to_delete}\" ( EXIT 0 ) ELSE ( EXIT 1 )",
+          "get_prereq_command": "mkdir #{folder_to_delete}"
+        }
+      ],
+      "auto_generated_guid": "ded937c4-2add-42f7-9c2c-c742b7a98698"
+    },
+    {
+      "name": "Delete a single file - Windows PowerShell",
+      "description": "Delete a single file from the temporary directory using Powershell. Upon execution, no output will be displayed. Use File Explorer to verify the file was deleted.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Remove-Item -path #{file_to_delete}"
+      },
+      "input_arguments": {
+        "file_to_delete": {
+          "description": "File to delete. Run the prereq command to create it if it does not exist.",
+          "type": "string",
+          "default": "$env:TEMP\\deleteme_T1551.004"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The file to delete must exist on disk at specified location (#{file_to_delete})",
+          "prereq_command": "if (Test-Path #{file_to_delete}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Path #{file_to_delete} | Out-Null"
+        }
+      ],
+      "auto_generated_guid": "9dee89bd-9a98-4c4f-9e2d-4256690b0e72"
+    },
+    {
+      "name": "Delete an entire folder - Windows PowerShell",
+      "description": "Recursively delete a folder in the temporary directory using Powershell. Upon execution, no output will be displayed. Use File Explorer to verify the folder was deleted.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Remove-Item -Path #{folder_to_delete} -Recurse"
+      },
+      "input_arguments": {
+        "folder_to_delete": {
+          "description": "Folder to delete. Run the prereq command to create it if it does not exist.",
+          "type": "string",
+          "default": "$env:TEMP\\deleteme_folder_T1551.004"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The folder to delete must exist on disk at specified location (#{folder_to_delete})",
+          "prereq_command": "if (Test-Path #{folder_to_delete}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Path #{folder_to_delete} -Type Directory | Out-Null"
+        }
+      ],
+      "auto_generated_guid": "edd779e4-a509-4cba-8dfa-a112543dbfb1"
+    },
+    {
+      "name": "Delete Filesystem - Linux",
+      "description": "This test deletes the entire root filesystem of a Linux system. This technique was used by Amnesia IoT malware to avoid analysis. This test is dangerous and destructive, do NOT use on production equipment.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "[ \"$(uname)\" = 'Linux' ] && rm -rf / --no-preserve-root > /dev/null 2> /dev/null || chflags -R 0 / && rm -rf / > /dev/null 2> /dev/null"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "f3aa95fe-4f10-4485-ad26-abf22a764c52"
+    },
+    {
+      "name": "Delete Prefetch File",
+      "description": "Delete a single prefetch file.  Deletion of prefetch files is a known anti-forensic technique. To verify execution, Run `(Get-ChildItem -Path \"$Env:SystemRoot\\prefetch\\*.pf\" | Measure-Object).Count`\nbefore and after the test to verify that the number of prefetch files decreases by 1.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "Remove-Item -Path (Join-Path \"$Env:SystemRoot\\prefetch\\\" (Get-ChildItem -Path \"$Env:SystemRoot\\prefetch\\*.pf\" -Name)[0])"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "36f96049-0ad7-4a5f-8418-460acaeb92fb"
+    },
+    {
+      "name": "Delete TeamViewer Log Files",
+      "description": "Adversaries may delete TeamViewer log files to hide activity. This should provide a high true-positive alert ration.\nThis test just places the files in a non-TeamViewer folder, a detection would just check for a deletion event matching the TeamViewer\nlog file format of TeamViewer_##.log. Upon execution, no output will be displayed. Use File Explorer to verify the folder was deleted.\n\nhttps://twitter.com/SBousseaden/status/1197524463304290305?s=20",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "New-Item -Path #{teamviewer_log_file} -Force | Out-Null\nRemove-Item #{teamviewer_log_file} -Force -ErrorAction Ignore"
+      },
+      "input_arguments": {
+        "teamviewer_log_file": {
+          "description": "Teamviewer log file to create and delete.",
+          "type": "string",
+          "default": "$env:TEMP\\TeamViewer_54.log"
+        }
+      },
+      "auto_generated_guid": "69f50a5f-967c-4327-a5bb-e1a9a9983785"
+    },
+    {
+      "name": "Clears Recycle bin via rd",
+      "description": "An adversary clears the recycle bin in the system partition using rd to remove traces of deleted files.\n[Reference](https://thedfirreport.com/2024/08/12/threat-actors-toolkit-leveraging-sliver-poshc2-batch-scripts/)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "command": "rd /s /q %systemdrive%\\$RECYCLE.BIN"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "f723d13d-48dc-4317-9990-cf43a9ac0bf2"
+    }
+  ]
+}

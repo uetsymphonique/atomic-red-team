@@ -1,0 +1,35 @@
+{
+  "attack_technique": "T1654",
+  "display_name": "Log Enumeration",
+  "atomic_tests": [
+    {
+      "name": "Get-EventLog To Enumerate Windows Security Log",
+      "description": "Uses the built-in PowerShell commandlet Get-EventLog to search for 'SYSTEM' keyword and saves results to a text file.\n\nThis technique was observed in a [TheDFIRReport case](https://thedfirreport.com/2023/04/03/malicious-iso-file-leads-to-domain-wide-ransomware/) \nwhere the threat actor enumerated the Windows Security audit log to determine user accounts and associated IPv4 addresses.\n\nSuccessful execution will save matching log events to the users temp folder.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "powershell -c {get-eventlog 'Security' | where {$_.Message -like '*SYSTEM*'} | export-csv $env:temp\\T1654_events.txt}",
+        "cleanup_command": "powershell -c \"remove-item $env:temp\\T1654_events.txt -ErrorAction Ignore\""
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "a9030b20-dd4b-4405-875e-3462c6078fdc"
+    },
+    {
+      "name": "Enumerate Windows Security Log via WevtUtil",
+      "description": "WevtUtil is a command line tool that can be utilised by adversaries to gather intelligence on a targeted Windows system's logging infrastructure. \n\nBy executing this command, malicious actors can enumerate all available event logs, including both default logs such as Application, Security, and System\nas well as any custom logs created by administrators. \n\nThis information provides valuable insight into the system's logging mechanisms, potentially allowing attackers to identify gaps or weaknesses in the logging configuration",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "wevtutil enum-logs"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "fef0ace1-3550-4bf1-a075-9fea55a778dd"
+    }
+  ]
+}

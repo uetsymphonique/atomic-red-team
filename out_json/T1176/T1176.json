@@ -1,0 +1,90 @@
+{
+  "attack_technique": "T1176",
+  "display_name": "Browser Extensions",
+  "atomic_tests": [
+    {
+      "name": "Chrome/Chromium (Developer Mode)",
+      "description": "Turn on Chrome/Chromium developer mode and Load Extension found in the src directory",
+      "supported_platforms": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "executor": {
+        "name": "manual",
+        "elevation_required": false,
+        "steps": "1. Navigate to [chrome://extensions](chrome://extensions) and\ntick 'Developer Mode'.\n\n2. Click 'Load unpacked extension...' and navigate to\n[Browser_Extension](../t1176/src/)\n\n3. Click 'Select'\n\n\n\n\n\n\n\n<br/>\n<br/>"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "3ecd790d-2617-4abf-9a8c-4e8d47da9ee1"
+    },
+    {
+      "name": "Chrome/Chromium (Chrome Web Store)",
+      "description": "Install the \"Minimum Viable Malicious Extension\" Chrome extension",
+      "supported_platforms": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "executor": {
+        "name": "manual",
+        "elevation_required": false,
+        "steps": "1. Navigate to https://chrome.google.com/webstore/detail/minimum-viable-malicious/odlpfdolehmhciiebahbpnaopneicend\nin Chrome\n\n2. Click 'Add to Chrome'\n\n\n\n\n\n\n\n<br/>\n<br/>"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "4c83940d-8ca5-4bb2-8100-f46dc914bc3f"
+    },
+    {
+      "name": "Firefox",
+      "description": "Create a file called test.wma, with the duration of 30 seconds",
+      "supported_platforms": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "executor": {
+        "name": "manual",
+        "elevation_required": false,
+        "steps": "1. Navigate to [about:debugging](about:debugging) and\nclick \"Load Temporary Add-on\"\n\n2. Navigate to [manifest.json](./src/manifest.json)\n\n3. Then click 'Open'\n\n\n\n\n\n\n\n<br/>\n<br/>"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "cb790029-17e6-4c43-b96f-002ce5f10938"
+    },
+    {
+      "name": "Edge Chromium Addon - VPN",
+      "description": "Adversaries may use VPN extensions in an attempt to hide traffic sent from a compromised host. This will install one (of many) available VPNS in the Edge add-on store.",
+      "supported_platforms": [
+        "windows",
+        "macos"
+      ],
+      "executor": {
+        "name": "manual",
+        "elevation_required": false,
+        "steps": "1. Navigate to https://microsoftedge.microsoft.com/addons/detail/fjnehcbecaggobjholekjijaaekbnlgj\nin Edge Chromium\n\n2. Click 'Get'\n\n\n\n\n\n\n\n<br/>\n<br/>"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "3d456e2b-a7db-4af8-b5b3-720e7c4d9da5"
+    },
+    {
+      "name": "Google Chrome Load Unpacked Extension With Command Line",
+      "description": "This test loads an unpacked extension in Google Chrome with the `--load-extension` parameter. This technique was previously used by the Grandoreiro malware to load a malicious extension that would capture the browsing history, steal cookies and other user information. Other malwares also leverage this technique to hijack searches, steal passwords, inject ads, and more.\n\nReferences:\nhttps://attack.mitre.org/techniques/T1176/\nhttps://securityintelligence.com/posts/grandoreiro-malware-now-targeting-banks-in-spain/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "# Chromium\n$chromium =  \"https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/1153778/chrome-win.zip\"\n\n# uBlock Origin Lite to test side-loading\n$extension = \"https://github.com/uBlockOrigin/uBOL-home/releases/download/uBOLite_2024.11.25.1376/uBOLite_2024.11.25.1376.chromium.mv3.zip\"\n\nSet-Location \"#{working_dir}\"\n\nSet-Variable ProgressPreference SilentlyContinue\nInvoke-WebRequest -URI $chromium -OutFile \"#{working_dir}\\chrome.zip\"\nInvoke-WebRequest -URI $extension -OutFile \"#{working_dir}\\extension.zip\"\n\n\nExpand-Archive chrome.zip -DestinationPath \"#{working_dir}\" -Force\nExpand-Archive extension.zip -Force\n\nStart-Process .\\chrome-win\\chrome.exe --load-extension=\"#{working_dir}\\extension\\\" -PassThru",
+        "cleanup_command": "Set-Location \"#{working_dir}\"\nStop-Process -Name chrome -Force\nRemove-Item .\\chrome.zip, .\\chrome-win, .\\extension, .\\extension.zip -Recurse -Force\nSet-Variable ProgressPreference Continue"
+      },
+      "input_arguments": {
+        "working_dir": {
+          "description": "Working directory where the files will be downloaded and extracted",
+          "type": "string",
+          "default": "$env:TEMP"
+        }
+      },
+      "auto_generated_guid": "7a714703-9f6b-461c-b06d-e6aeac650f27"
+    }
+  ]
+}

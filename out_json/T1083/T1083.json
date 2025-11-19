@@ -1,0 +1,216 @@
+{
+  "attack_technique": "T1083",
+  "display_name": "File and Directory Discovery",
+  "atomic_tests": [
+    {
+      "name": "File and Directory Discovery (cmd.exe)",
+      "description": "Find or discover files on the file system.  Upon successful execution, this test will output the results of all the data discovery commands to a specified file.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "dir /s c:\\ >> #{output_file}\ndir /s \"c:\\Documents and Settings\" >> #{output_file}\ndir /s \"c:\\Program Files\\\" >> #{output_file}\ndir \"%systemdrive%\\Users\\*.*\" >> #{output_file}\ndir \"%userprofile%\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\*.*\" >> #{output_file}\ndir \"%userprofile%\\Desktop\\*.*\" >> #{output_file}\ntree /F >> #{output_file}",
+        "cleanup_command": "del #{output_file}"
+      },
+      "input_arguments": {
+        "output_file": {
+          "description": "File to output results to",
+          "type": "string",
+          "default": "%temp%\\T1083Test1.txt"
+        }
+      },
+      "auto_generated_guid": "0e36303b-6762-4500-b003-127743b80ba6"
+    },
+    {
+      "name": "File and Directory Discovery (PowerShell)",
+      "description": "Find or discover files on the file system. Upon execution, file and folder information will be displayed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "ls -recurse\nget-childitem -recurse\ngci -recurse"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "2158908e-b7ef-4c21-8a83-3ce4dd05a924"
+    },
+    {
+      "name": "Nix File and Directory Discovery",
+      "description": "Find or discover files on the file system\n\nReferences:\n\nhttp://osxdaily.com/2013/01/29/list-all-files-subdirectory-contents-recursively/\n\nhttps://perishablepress.com/list-files-folders-recursively-terminal/",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "ls -a >> #{output_file}\nif [ -d /Library/Preferences/ ]; then ls -la /Library/Preferences/ > #{output_file}; fi;\nfile */* *>> #{output_file}\ncat #{output_file} 2>/dev/null\nfind . -type f\nls -R | grep \":$\" | sed -e 's/:$//' -e 's/[^-][^\\/]*\\//--/g' -e 's/^/ /' -e 's/-/|/'\nlocate *\nwhich sh",
+        "cleanup_command": "rm #{output_file}"
+      },
+      "input_arguments": {
+        "output_file": {
+          "description": "Output file used to store the results.",
+          "type": "path",
+          "default": "/tmp/T1083.txt"
+        }
+      },
+      "auto_generated_guid": "ffc8b249-372a-4b74-adcd-e4c0430842de"
+    },
+    {
+      "name": "Nix File and Directory Discovery 2",
+      "description": "Find or discover files on the file system",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "cd $HOME && find . -print | sed -e 's;[^/]*/;|__;g;s;__|; |;g' > #{output_file}\nif [ -f /etc/mtab ]; then cat /etc/mtab >> #{output_file}; fi;\nfind . -type f -iname *.pdf >> #{output_file}\ncat #{output_file}\nfind . -type f -name \".*\"",
+        "cleanup_command": "rm #{output_file}"
+      },
+      "input_arguments": {
+        "output_file": {
+          "description": "Output file used to store the results.",
+          "type": "path",
+          "default": "/tmp/T1083.txt"
+        }
+      },
+      "auto_generated_guid": "13c5e1ae-605b-46c4-a79f-db28c77ff24e"
+    },
+    {
+      "name": "Simulating MAZE Directory Enumeration",
+      "description": "This test emulates MAZE ransomware's ability to enumerate directories using Powershell.\nUpon successful execution, this test will output the directory enumeration results to a specified file, as well as display them in the active window.\nSee https://www.mandiant.com/resources/tactics-techniques-procedures-associated-with-maze-ransomware-incidents",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$folderarray = @(\"Desktop\", \"Downloads\", \"Documents\", \"AppData/Local\", \"AppData/Roaming\")\nGet-ChildItem -Path $env:homedrive -ErrorAction SilentlyContinue | Out-File -append #{File_to_output}\nGet-ChildItem -Path $env:programfiles -erroraction silentlycontinue | Out-File -append #{File_to_output}\nGet-ChildItem -Path \"${env:ProgramFiles(x86)}\" -erroraction silentlycontinue | Out-File -append #{File_to_output}\n$UsersFolder = \"$env:homedrive\\Users\\\"\nforeach ($directory in Get-ChildItem -Path $UsersFolder -ErrorAction SilentlyContinue)\n{\nforeach ($secondarydirectory in $folderarray)\n {Get-ChildItem -Path \"$UsersFolder/$directory/$secondarydirectory\" -ErrorAction SilentlyContinue | Out-File -append #{File_to_output}}\n}\ncat #{File_to_output}",
+        "cleanup_command": "remove-item #{File_to_output} -ErrorAction SilentlyContinue"
+      },
+      "input_arguments": {
+        "File_to_output": {
+          "description": "File to output results to",
+          "type": "string",
+          "default": "$env:temp\\T1083Test5.txt"
+        }
+      },
+      "auto_generated_guid": "c6c34f61-1c3e-40fb-8a58-d017d88286d8"
+    },
+    {
+      "name": "Launch DirLister Executable",
+      "description": "Launches the DirLister executable for a short period of time and then exits.\n\nRecently seen used by [BlackCat ransomware](https://news.sophos.com/en-us/2022/07/14/blackcat-ransomware-attacks-not-merely-a-byproduct-of-bad-luck/) to create a list of accessible directories and files.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Start-Process \"#{dirlister_path}\"\nStart-Sleep -Second 4\nStop-Process -Name \"DirLister\""
+      },
+      "input_arguments": {
+        "dirlister_path": {
+          "description": "Path to the DirLister executable",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\DirLister.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "DirLister.exe must exist in the specified path #{dirlister_path}",
+          "prereq_command": "if (Test-Path \"#{dirlister_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "$parentpath = Split-Path \"#{dirlister_path}\"\nNew-Item -ItemType Directory -Force -Path $parentpath | Out-Null\nInvoke-WebRequest https://github.com/SanderSade/DirLister/releases/download/v2.beta4/DirLister.v2.beta4.zip -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4.zip\"\nExpand-Archive -Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4.zip\" -DestinationPath \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4\" -Force\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4\\*\" \"$parentpath\" -Recurse\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4.zip\",\"PathToAtomicsFolder\\..\\ExternalPayloads\\TDirLister.v2.beta4\" -Recurse -ErrorAction Ignore"
+        }
+      ],
+      "auto_generated_guid": "c5bec457-43c9-4a18-9a24-fe151d8971b7"
+    },
+    {
+      "name": "ESXi - Enumerate VMDKs available on an ESXi Host",
+      "description": "An adversary uses the find command to enumerate vmdks on an ESXi host.\n[Reference](https://www.crowdstrike.com/blog/hypervisor-jackpotting-ecrime-actors-increase-targeting-of-esxi-servers/)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "echo \"\" | \"#{plink_file}\" \"#{vm_host}\" -ssh  -l \"#{vm_user}\" -pw \"#{vm_pass}\" -m \"#{cli_script}\""
+      },
+      "input_arguments": {
+        "vm_host": {
+          "description": "Specify the host name of the ESXi Server",
+          "type": "string",
+          "default": "atomic.local"
+        },
+        "vm_user": {
+          "description": "Specify the privilege user account on ESXi Server",
+          "type": "string",
+          "default": "root"
+        },
+        "vm_pass": {
+          "description": "Specify the privilege user password on ESXi Server",
+          "type": "string",
+          "default": "pass"
+        },
+        "plink_file": {
+          "description": "Path to Plink",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\plink.exe"
+        },
+        "cli_script": {
+          "description": "Path to script with file discovery commands",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1083\\src\\esxi_file_discovery.txt"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Check if plink is available.",
+          "prereq_command": "if (Test-Path \"#{plink_file}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://the.earth.li/~sgtatham/putty/latest/w64/plink.exe\" -OutFile \"#{plink_file}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "4a233a40-caf7-4cf1-890a-c6331bbc72cf"
+    },
+    {
+      "name": "Identifying Network Shares - Linux",
+      "description": "If the system uses network file systems (e.g., NFS, CIFS), findmnt can help locate paths to remote shares.\nAttackers may then attempt to access these shares for lateral movement or data exfiltration.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "findmnt -t nfs"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "361fe49d-0c19-46ec-a483-ccb92d38e88e"
+    },
+    {
+      "name": "Recursive Enumerate Files And Directories By Powershell",
+      "description": "Adversary attempting to discover and collect sensitive documents and archives\nfrom a user’s system. The test recursively enumerates common user folders\n(Documents, Downloads, Desktop, OneDrive) for file types of interest such as .pdf, .doc,\n.docx, .xls, .xlsx, .txt, .zip, .rar, and .7z.\nThis behavior is similar to malware like LOSTKEYS used by COLDRIVER in January 2025,\nwhere attackers perform targeted file discovery to support strategic intelligence collection https://www.zscaler.com/blogs/security-research/coldriver-updates-arsenal-baitswitch-and-simplefix.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$out = \"#{output_file}\"\n$dirsFilter = @('Documents','Downloads','Desktop','OneDrive')\n$exts = @('.pdf','.doc','.docx','.xls','.xlsx','.txt','.zip','.rar','.7z')\n$userProfile = [Environment]::GetFolderPath('UserProfile')\n$tr = [System.Collections.Generic.List[string]]::new()\n\nfunction MatchesExtension($path) {\n  try {\n    $e = [System.IO.Path]::GetExtension($path).ToLower()\n    return $exts -contains $e\n  } catch { return $false }\n}\n\nfunction Scan-Dir($root) {\n  try {\n    $match = $false\n    foreach ($f in $dirsFilter) { if ($root -like \"*$f*\") { $match = $true; break } }\n    if (-not $match) { return }\n\n    [System.IO.Directory]::EnumerateFiles($root) | ForEach-Object {\n      if (MatchesExtension $_) {\n        $fi = [System.IO.FileInfo]::new($_)\n        $tr.Add(\"[File] $_ Size:$($fi.Length) LastWrite:$($fi.LastWriteTime)\")\n      }\n    }\n\n    [System.IO.Directory]::EnumerateDirectories($root) | ForEach-Object {\n      Scan-Dir $_\n    }\n  } catch [System.UnauthorizedAccessException] {\n    $tr.Add(\"[AccessDenied] $root\")\n  } catch {\n    $tr.Add(\"[Error] $root => $($_.Exception.Message)\")\n  }\n}\n\n[System.IO.Directory]::EnumerateDirectories($userProfile) | ForEach-Object { Scan-Dir $_ }\n\n# Ensure output dir exists\n$outDir = [System.IO.Path]::GetDirectoryName($out)\nif (-not [string]::IsNullOrEmpty($outDir) -and -not (Test-Path $outDir)) {\n  New-Item -Path $outDir -ItemType Directory -Force | Out-Null\n}\n\n# Write results\n$tr | Out-File -FilePath $out -Encoding UTF8\nWrite-Output \"Enumeration complete. Results written to: $out\"",
+        "cleanup_command": "Remove-Item -Path \"#{output_file}\" -ErrorAction SilentlyContinue"
+      },
+      "input_arguments": {
+        "output_file": {
+          "description": "File to output results.",
+          "type": "string",
+          "default": "$env:TEMP\\T1083-Enumerate-net.txt"
+        }
+      },
+      "auto_generated_guid": "95a21323-770d-434c-80cd-6f6fbf7af432"
+    }
+  ]
+}

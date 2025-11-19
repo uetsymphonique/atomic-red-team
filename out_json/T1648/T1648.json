@@ -1,0 +1,59 @@
+{
+  "attack_technique": "T1648",
+  "display_name": "Serverless Execution",
+  "atomic_tests": [
+    {
+      "name": "Lambda Function Hijack",
+      "description": "Modify an existing Lambda function to execute arbitrary code.",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Import-Module \"PathToAtomicsFolder/T1648/src/T1648-1/LambdaAttack.ps1\" -Force\n$access_key = \"#{access_key}\"\n$secret_key = \"#{secret_key}\"\n$session_token = \"#{session_token}\"\n$aws_profile = \"#{profile}\"\n$region = \"#{region}\"\nSet-AWSAuthentication -AccessKey $access_key -SecretKey $secret_key -SessionToken $session_token -AWSProfile $aws_profile -AWSRegion $region\nInvoke-Terraform -TerraformCommand init -TerraformDirectory \"PathToAtomicsFolder/T1648/src/T1648-1\"\nInvoke-Terraform -TerraformCommand apply -TerraformDirectory \"PathToAtomicsFolder/T1648/src/T1648-1\" -TerraformVariables @(\"profile=T1648-1\", \"region=$region\")\nInvoke-LambdaAttack -AWSProfile \"T1648-1\" -AWSRegion $region",
+        "cleanup_command": "Import-Module \"PathToAtomicsFolder/T1648/src/T1648-1/LambdaAttack.ps1\" -Force\n$access_key = \"#{access_key}\"\n$secret_key = \"#{secret_key}\"\n$session_token = \"#{session_token}\"\n$aws_profile = \"#{profile}\"\n$region = \"#{region}\"\nSet-AWSAuthentication -AccessKey $access_key -SecretKey $secret_key -SessionToken $session_token -AWSProfile $aws_profile -AWSRegion $region\nInvoke-Terraform -TerraformCommand destroy -TerraformDirectory \"PathToAtomicsFolder/T1648/src/T1648-1\" -TerraformVariables @(\"profile=T1648-1\", \"region=$region\")\nRemove-MaliciousUser -AWSProfile \"T1648-1\"\nRemove-TFFiles -Path \"PathToAtomicsFolder/T1648/src/T1648-1/\""
+      },
+      "input_arguments": {
+        "access_key": {
+          "description": "AWS Access Key",
+          "type": "string",
+          "default": null
+        },
+        "secret_key": {
+          "description": "AWS Secret Key",
+          "type": "string",
+          "default": null
+        },
+        "session_token": {
+          "description": "AWS Session Token",
+          "type": "string",
+          "default": null
+        },
+        "profile": {
+          "description": "AWS profile",
+          "type": "string",
+          "default": null
+        },
+        "region": {
+          "description": "AWS region to deploy the EC2 instance",
+          "type": "string",
+          "default": "us-east-2"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The AWS PowerShell module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name AWSPowerShell -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AWSPowerShell -Force"
+        },
+        {
+          "description": "Terraform must be installed.",
+          "prereq_command": "terraform --version",
+          "get_prereq_command": "Write-Host \"Terraform is required. Download it from https://www.terraform.io/downloads.html\""
+        }
+      ],
+      "auto_generated_guid": "87a4a141-c2bb-49d1-a604-8679082d8b91"
+    }
+  ]
+}

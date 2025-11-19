@@ -1,0 +1,151 @@
+{
+  "attack_technique": "T1027.004",
+  "display_name": "Obfuscated Files or Information: Compile After Delivery",
+  "atomic_tests": [
+    {
+      "name": "Compile After Delivery using csc.exe",
+      "description": "Compile C# code using csc.exe binary used by .NET\nUpon execution an exe named T1027.004.exe will be placed in the temp folder",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /out:#{output_file} \"#{input_file}\"",
+        "cleanup_command": "del #{output_file} >nul 2>&1"
+      },
+      "input_arguments": {
+        "output_file": {
+          "description": "Output compiled binary",
+          "type": "path",
+          "default": "C:\\Windows\\Temp\\T1027.004.exe"
+        },
+        "input_file": {
+          "description": "C# code that launches calc.exe from a hidden cmd.exe Window",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1027.004\\src\\calc.cs"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "C# file must exist on disk at specified location (#{input_file})",
+          "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{input_file}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/calc.cs\" -OutFile \"#{input_file}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "ffcdbd6a-b0e8-487d-927a-09127fe9a206"
+    },
+    {
+      "name": "Dynamic C# Compile",
+      "description": "When C# is compiled dynamically, a .cmdline file will be created as a part of the process. \nCertain processes are not typically observed compiling C# code, but can do so without touching disk. This can be used to unpack a payload for execution.\nThe exe file that will be executed is named as T1027.004_DynamicCompile.exe is contained in the 'bin' folder of this atomic, and the source code to the file is in the 'src' folder.\nUpon execution, the exe will print 'T1027.004 Dynamic Compile'.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Invoke-Expression \"#{input_file}\""
+      },
+      "input_arguments": {
+        "input_file": {
+          "description": "exe program containing dynamically compiled C# code",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1027.004\\bin\\T1027.004_DynamicCompile.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "exe file must exist on disk at specified location (#{input_file})",
+          "prereq_command": "if (Test-Path \"#{input_file}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Invoke-WebRequest https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/bin/T1027.004_DynamicCompile.exe -OutFile \"#{input_file}\""
+        }
+      ],
+      "auto_generated_guid": "453614d8-3ba6-4147-acc0-7ec4b3e1faef"
+    },
+    {
+      "name": "C compile",
+      "description": "Compile a c file with either gcc or clang on FreeBSD, Linux or Macos.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "gcc #{input_file} && ./a.out\nclang #{input_file} && ./a.out"
+      },
+      "input_arguments": {
+        "input_file": {
+          "description": "source file",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1027.004/src/T1027-004-test.c"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "the source file must exist on disk at specified location (#{input_file})",
+          "prereq_command": "if [ -e  #{input_file} ]; then exit 0; else exit 1; fi",
+          "get_prereq_command": "wget https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/T1027-004-test.c -O \"#{input_file}\""
+        }
+      ],
+      "auto_generated_guid": "d0377aa6-850a-42b2-95f0-de558d80be57"
+    },
+    {
+      "name": "CC compile",
+      "description": "Compile a c file with either gcc or clang on FreeBSD, Linux or Macos.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "g++ #{input_file} && ./a.out\nclang++ #{input_file} && ./a.out"
+      },
+      "input_arguments": {
+        "input_file": {
+          "description": "source file",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1027.004/src/T1027-004-test.cc"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "the source file must exist on disk at specified location (#{input_file})",
+          "prereq_command": "if [ -e  #{input_file} ]; then exit 0; else exit 1; fi",
+          "get_prereq_command": "wget https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/T1027-004-test.cc -O #{input_file}"
+        }
+      ],
+      "auto_generated_guid": "da97bb11-d6d0-4fc1-b445-e443d1346efe"
+    },
+    {
+      "name": "Go compile",
+      "description": "Compile a go file with golang on FreeBSD, Linux or Macos.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "go run #{input_file}"
+      },
+      "input_arguments": {
+        "input_file": {
+          "description": "source file",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1027.004/src/T1027-004-test.go"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "the source file must exist on disk at specified location (#{input_file})",
+          "prereq_command": "if [ -e  #{input_file} ]; then exit 0; else exit 1; fi",
+          "get_prereq_command": "wget https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1027.004/src/T1027-004-test.go -O #{input_file}"
+        }
+      ],
+      "auto_generated_guid": "78bd3fa7-773c-449e-a978-dc1f1500bc52"
+    }
+  ]
+}

