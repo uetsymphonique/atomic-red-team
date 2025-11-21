@@ -1,0 +1,243 @@
+{
+  "attack_technique": "T1113",
+  "display_name": "Screen Capture",
+  "atomic_tests": [
+    {
+      "name": "Screencapture",
+      "description": "Use screencapture command to collect a full desktop screenshot",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "screencapture #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "/tmp/T1113_desktop.png"
+        }
+      ],
+      "auto_generated_guid": "0f47ceb1-720f-4275-96b8-21f0562217ac"
+    },
+    {
+      "name": "Screencapture (silent)",
+      "description": "Use screencapture command to collect a full desktop screenshot",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "screencapture -x #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "/tmp/T1113_desktop.png"
+        }
+      ],
+      "auto_generated_guid": "deb7d358-5fbd-4dc4-aecc-ee0054d2d9a4"
+    },
+    {
+      "name": "X Windows Capture",
+      "description": "Use xwd command to collect a full desktop screenshot and review file with xwud",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "xwd -root -out #{output_file}\nxwud -in #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "/tmp/T1113_desktop.xwd"
+        },
+        {
+          "arg_name": "package_checker",
+          "description": "Package checking command for linux. Debian system command- dpkg -s x11-apps",
+          "type": "string",
+          "default": "rpm -q xorg-x11-apps"
+        },
+        {
+          "arg_name": "package_installer",
+          "description": "Package installer command for linux. Debian system command- apt-get install x11-apps",
+          "type": "string",
+          "default": "yum install -y xorg-x11-apps"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Package with XWD and XWUD must exist on device",
+          "prereq_command": "if #{package_checker} > /dev/null; then exit 0; else exit 1; fi",
+          "get_prereq_command": "sudo #{package_installer}"
+        }
+      ],
+      "auto_generated_guid": "8206dd0c-faf6-4d74-ba13-7fbe13dce6ac"
+    },
+    {
+      "name": "X Windows Capture (freebsd)",
+      "description": "Use xwd command to collect a full desktop screenshot and review file with xwud",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "xwd -root -out #{output_file}\nxwud -in #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "/tmp/T1113_desktop.xwd"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Package with XWD and XWUD must exist on device",
+          "prereq_command": "if [ -x \"$(command -v xwd)\" ]; then exit 0; else exit 1; fi\nif [ -x \"$(command -v xwud)\" ]; then exit 0; else exit 1; fi",
+          "get_prereq_command": "pkg install -y xwd xwud"
+        }
+      ],
+      "auto_generated_guid": "562f3bc2-74e8-46c5-95c7-0e01f9ccc65c"
+    },
+    {
+      "name": "Capture Linux Desktop using Import Tool",
+      "description": "Use import command from ImageMagick to collect a full desktop screenshot",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "import -window root #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "/tmp/T1113_desktop.png"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "ImageMagick must be installed",
+          "prereq_command": "if import -help > /dev/null 2>&1; then exit 0; else exit 1; fi",
+          "get_prereq_command": "sudo apt install graphicsmagick-imagemagick-compat"
+        }
+      ],
+      "auto_generated_guid": "9cd1cccb-91e4-4550-9139-e20a586fcea1"
+    },
+    {
+      "name": "Capture Linux Desktop using Import Tool (freebsd)",
+      "description": "Use import command from ImageMagick to collect a full desktop screenshot",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "import -window root #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "/tmp/T1113_desktop.png"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "ImageMagick must be installed",
+          "prereq_command": "if import -help > /dev/null 2>&1; then exit 0; else exit 1; fi",
+          "get_prereq_command": "pkg install -y ImageMagick7"
+        }
+      ],
+      "auto_generated_guid": "18397d87-38aa-4443-a098-8a48a8ca5d8d"
+    },
+    {
+      "name": "Windows Screencapture",
+      "description": "Use Psr.exe binary to collect screenshots of user display. Test will do left mouse click to simulate user behaviour",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file} -ErrorAction Ignore",
+        "procedure": "cmd /c start /b psr.exe /start /output #{output_file} /sc 1 /gui 0 /stopevent 12\nAdd-Type -MemberDefinition '[DllImport(\"user32.dll\")] public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int info);' -Name U32 -Namespace W;\n[W.U32]::mouse_event(0x02 -bor 0x04 -bor 0x01, 0, 0, 0, 0);\ncmd /c \"timeout #{recording_time} > NULL && psr.exe /stop\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Output file path",
+          "type": "path",
+          "default": "c:\\temp\\T1113_desktop.zip"
+        },
+        {
+          "arg_name": "recording_time",
+          "description": "Time to take screenshots",
+          "type": "integer",
+          "default": "5"
+        }
+      ],
+      "auto_generated_guid": "3c898f62-626c-47d5-aad2-6de873d69153"
+    },
+    {
+      "name": "Windows Screen Capture (CopyFromScreen)",
+      "description": "Take a screen capture of the desktop through a call to the [Graphics.CopyFromScreen] .NET API.\n\n[Graphics.CopyFromScreen]: https://docs.microsoft.com/en-us/dotnet/api/system.drawing.graphics.copyfromscreen",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item #{output_file} -ErrorAction Ignore",
+        "procedure": "Add-Type -AssemblyName System.Windows.Forms\n$screen = [Windows.Forms.SystemInformation]::VirtualScreen\n$bitmap = New-Object Drawing.Bitmap $screen.Width, $screen.Height\n$graphic = [Drawing.Graphics]::FromImage($bitmap)\n$graphic.CopyFromScreen($screen.Left, $screen.Top, 0, 0, $bitmap.Size)\n$bitmap.Save(\"#{output_file}\")"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Path where captured results will be placed",
+          "type": "path",
+          "default": "$env:TEMP\\T1113.png"
+        }
+      ],
+      "auto_generated_guid": "e9313014-985a-48ef-80d9-cde604ffc187"
+    },
+    {
+      "name": "Windows Recall Feature Enabled - DisableAIDataAnalysis Value Deleted",
+      "description": "Detects the enabling of the Windows Recall feature via registry manipulation. Windows Recall can be enabled by deleting the existing \"DisableAIDataAnalysis\" registry value. Adversaries may enable Windows Recall as part of post-exploitation discovery and collection activities. This rule assumes that Recall is already explicitly disabled on the host, and subsequently enabled by the adversary. \n- https://learn.microsoft.com/en-us/windows/client-management/manage-recall\n- https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-windowsai#disableaidataanalysis",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "reg add \"HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f",
+        "procedure": "reg add \"HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /t REG_DWORD /d 0 /f\nreg delete \"HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\" /v DisableAIDataAnalysis /f"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "5a496325-0115-4274-8eb9-755b649ad0fb"
+    }
+  ]
+}

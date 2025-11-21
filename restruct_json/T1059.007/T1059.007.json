@@ -1,0 +1,65 @@
+{
+  "attack_technique": "T1059.007",
+  "display_name": "Command and Scripting Interpreter: JavaScript",
+  "atomic_tests": [
+    {
+      "name": "JScript execution to gather local computer information via cscript",
+      "description": "JScript execution test, execute JScript via cscript command. When successful, system information will be written to $env:TEMP\\T1059.007.out.txt",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del %tmp%\\T1059.007.out.txt >nul 2>&1",
+        "procedure": "cscript \"#{jscript}\" > %tmp%\\T1059.007.out.txt"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "jscript",
+          "description": "Path to sample script",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\T1059.007\\src\\sys_info.js"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Sample script must exist on disk at specified location (#{jscript})",
+          "prereq_command": "if (Test-Path \"#{jscript}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -ItemType Directory (Split-Path \"#{jscript}\") -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.007/src/sys_info.js\" -OutFile \"#{jscript}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "01d75adf-ca1b-4dd1-ac96-7c9550ad1035"
+    },
+    {
+      "name": "JScript execution to gather local computer information via wscript",
+      "description": "JScript execution test, execute JScript via wscript command. When successful, system information will be shown with four message boxes.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "wscript \"#{jscript}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "jscript",
+          "description": "Path to sample script",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\T1059.007\\src\\sys_info.js"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Sample script must exist on disk at specified location (#{jscript})",
+          "prereq_command": "if (Test-Path \"#{jscript}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -ItemType Directory (Split-Path \"#{jscript}\") -Force | Out-Null\nInvoke-WebRequest \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.007/src/sys_info.js\" -OutFile \"#{jscript}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "0709945e-4fec-4c49-9faf-c3c292a74484"
+    }
+  ]
+}

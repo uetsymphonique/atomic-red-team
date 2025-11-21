@@ -1,0 +1,142 @@
+{
+  "attack_technique": "T1619",
+  "display_name": "Cloud Storage Object Discovery",
+  "atomic_tests": [
+    {
+      "name": "AWS S3 Enumeration",
+      "description": "This test will enumerate all the S3 buckets in the user account and lists all the files in each bucket.",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "for bucket in \"$(aws s3 ls | cut -d \" \" -f3)\"; do aws s3api list-objects-v2 --bucket $bucket --output text; done"
+      },
+      "input_arguments": [],
+      "dependencies": [
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS default profile using: aws configure"
+        }
+      ],
+      "auto_generated_guid": "3c7094f8-71ec-4917-aeb8-a633d7ec4ef5"
+    },
+    {
+      "name": "Azure - Enumerate Storage Account Objects via Shared Key authorization using Azure CLI",
+      "description": "This test enumerates all existing storage accounts and tries to fetch for each account the contained storage account objects. The access to storage objects is only possible if Shared Key authorization is enabled (e.g this is the case per default for storage objects creaded by Azure Function Apps).\n\nRequirements:\n- The test is intended to be executed in interactive mode (with -Interactive parameter) in order to complete the az login command when MFA is required.\n- The EntraID user must have the role \"Storage Account Contributor\", or a role with similar permissions.\n\nOutput format: Csv file that contains the found storage account objects\n- Columns: ResourceGroup, StorageAccountName, FileShareName, ContainerName, BlobName, TableName, QueueName\n- The content of these columns is filled out depending on the object. Not-required columns are left empt. Example: For a blob object the ResourceGroup, StorageAccountName, ContainerName, BlobName are filled out, the other fields are left empty.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item -Path \"#{output_file}\" -Force -erroraction silentlycontinue\nWrite-Output \"Removed #{output_file}\"",
+        "procedure": "az login    # Login to Azure\n\n# Get all storage accounts in the subscription\n$storageAccounts = az storage account list --query \"[].{name:name, resourceGroup:resourceGroup}\" --output json | ConvertFrom-Json\n\n$storageAccountObjects = @()\n$downloadedFunctionFiles = @()\n\nforeach ($account in $storageAccounts) {\n    Write-Output \"`nFound storage account $($account.name)\"\n\n    $storageAccountObjects += [PSCustomObject]@{\n        ResourceGroup      = $account.resourceGroup\n        StorageAccountName = $account.name\n        FileShareName      = \"\"\n        ContainerName      = \"\"\n        BlobName           = \"\"\n        TableName          = \"\"\n        QueueName          = \"\"\n    }\n\n    $allowSharedKeyAccess = az storage account show --name $account.name --resource-group $account.resourceGroup --query \"allowSharedKeyAccess\"\n    \n    if ($allowSharedKeyAccess -eq \"false\") {    # $allowSharedKeyAccess could be true or null\n        Write-Output \"Shared key access is disabled for this storage account.\"\n    } else {\n        $connectionString = az storage account show-connection-string --name $account.name --resource-group $account.resourceGroup --query connectionString --output tsv\n        \n        $fileShares = az storage share list --connection-string $connectionString --query \"[].name\" --output json | ConvertFrom-Json\n        foreach($fileShare in $fileShares) {\n            Write-Output \"Found file share: $($fileShare)\"\n            $storageAccountObjects += [PSCustomObject]@{\n                ResourceGroup      = $account.resourceGroup\n                StorageAccountName = $account.name\n                FileShareName      = $fileShare\n                ContainerName      = \"\"\n                BlobName           = \"\"\n                TableName          = \"\"\n                QueueName          = \"\"\n            }\n        }\n\n        $containers = az storage container list --connection-string $connectionString --query \"[].name\" --output json | ConvertFrom-Json\n        foreach($container in $containers) {\n            Write-Output \"Found container: $($container)\"\n            $storageAccountObjects += [PSCustomObject]@{\n                ResourceGroup      = $account.resourceGroup\n                StorageAccountName = $account.name\n                FileShareName      = \"\"\n                ContainerName      = $container\n                BlobName           = \"\"\n                TableName          = \"\"\n                QueueName          = \"\"\n            }\n\n            $blobs = az storage blob list --connection-string $connectionString --container-name $container --query \"[].name\" --output json | ConvertFrom-Json\n\n            foreach($blob in $blobs) {\n                Write-Output \"Found blob: $($blob)\"\n                $storageAccountObjects += [PSCustomObject]@{\n                    ResourceGroup      = $account.resourceGroup\n                    StorageAccountName = $account.name\n                    FileShareName      = \"\"\n                    ContainerName      = $container\n                    BlobName           = $blob\n                    TableName          = \"\"\n                    QueueName          = \"\"\n                }\n            }\n        }\n        \n        $tables = az storage table list --connection-string $connectionString --query \"[].name\" --output json | ConvertFrom-Json\n        foreach($table in $tables) {\n            Write-Output \"Found table: $($table)\"\n            $storageAccountObjects += [PSCustomObject]@{\n                ResourceGroup      = $account.resourceGroup\n                StorageAccountName = $account.name\n                FileShareName      = \"\"\n                ContainerName      = \"\"\n                BlobName           = \"\"\n                TableName          = $table\n                QueueName          = \"\"\n            }\n        }\n        \n        $queues = az storage queue list --connection-string $connectionString --query \"[].name\" --output json | ConvertFrom-Json\n        foreach($queue in $queues) {\n            Write-Output \"Found table: $($table)\"\n            $storageAccountObjects += [PSCustomObject]@{\n                ResourceGroup      = $account.resourceGroup\n                StorageAccountName = $account.name\n                FileShareName      = \"\"\n                ContainerName      = \"\"\n                BlobName           = \"\"\n                TableName          = \"\"\n                QueueName          = $queue\n            }\n        }\n    }\n}\n\n# Store file lists to csv file\n$storageAccountObjects | Export-Csv -Path \"#{output_file}\" -NoTypeInformation\nWrite-Output \"`nDownloaded storage account objects to #{output_file}\"\n\n# Print lists that have been stored as csv file\n$storageAccountObjects | Format-Table -Property ResourceGroup, StorageAccountName, FileShareName, ContainerName, BlobName, TableName, QueueName -AutoSize -Wrap"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "Csv file path for results",
+          "type": "path",
+          "default": "$env:temp\\T1619_storage_account_objects.csv"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Azure CLI must be installed",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az -Force"
+        }
+      ],
+      "auto_generated_guid": "070322a4-2c60-4c50-8ffb-c450a34fe7bf"
+    },
+    {
+      "name": "Azure - Scan for Anonymous Access to Azure Storage (Powershell)",
+      "description": "Upon successful execution, this test will test for anonymous access to Azure storage containers by invoking a web request and outputting the results to a file. \nThe corresponding response could then be interpreted to determine whether or not the resource/container exists, as well as other information. \nSee https://ninocrudele.com/the-three-most-effective-and-dangerous-cyberattacks-to-azure-and-countermeasures-part-2-attack-the-azure-storage-service",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "remove-item #{output_file} -erroraction silentlycontinue",
+        "procedure": "try{$response = invoke-webrequest \"https://#{base_name}.blob.core.windows.net/#{container_name}/#{blob_name}\" -method \"GET\"}\ncatch [system.net.webexception]\n{if($_.Exception.Response -ne $null)\n{$Response = $_.Exception.Response.GetResponseStream()\n$ReadResponse = New-Object System.IO.StreamReader($Response)\n$ReadResponse.BaseStream.Position = 0\n$responseBody = $ReadResponse.ReadToEnd()}\nelse {$responseBody = \"The storage account could not be anonymously accessed.\"}}\n\"Response received for #{base_name}.blob.core.windows.net/#{container_name}/#{blob_name}: $responsebody\" | out-file -filepath #{output_file} -append"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "base_name",
+          "description": "Azure storage account name to test",
+          "type": "string",
+          "default": "T1619Test2"
+        },
+        {
+          "arg_name": "output_file",
+          "description": "File to output results to",
+          "type": "string",
+          "default": "$env:temp\\T1619Test2.txt"
+        },
+        {
+          "arg_name": "container_name",
+          "description": "Container name to search for (optional)",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "blob_name",
+          "description": "Blob name to search for (optional)",
+          "type": "string",
+          "default": null
+        }
+      ],
+      "auto_generated_guid": "146af1f1-b74e-4aa7-9895-505eb559b4b0"
+    },
+    {
+      "name": "Azure - Enumerate Azure Blobs with MicroBurst",
+      "description": "Upon successful execution, this test will utilize a wordlist to enumerate the public facing containers and blobs of a specified Azure storage account. \nSee https://www.netspi.com/blog/technical/cloud-penetration-testing/anonymously-enumerating-azure-file-resources/ .",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "remove-item #{output_file} -erroraction silentlycontinue",
+        "procedure": "import-module \"PathToAtomicsFolder\\..\\ExternalPayloads\\Invoke-EnumerateAzureBlobs.ps1\"\nInvoke-EnumerateAzureBlobs -base #{base} -permutations \"#{wordlist}\" -outputfile \"#{output_file}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "base",
+          "description": "Azure blob keyword to enumerate (Example, storage account name)",
+          "type": "string",
+          "default": "secure"
+        },
+        {
+          "arg_name": "output_file",
+          "description": "File to output results to",
+          "type": "string",
+          "default": "$env:temp\\T1619Test1.txt"
+        },
+        {
+          "arg_name": "wordlist",
+          "description": "File path to keywords for search permutations",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\permutations.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The Invoke-EnumerateAzureBlobs module must exist in PathToAtomicsFolder\\..\\ExternalPayloads.",
+          "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Invoke-EnumerateAzureBlobs.ps1\"){exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\ninvoke-webrequest \"https://raw.githubusercontent.com/NetSPI/MicroBurst/156c4e9f4253b482b2b68eda4651116b9f0f2e17/Misc/Invoke-EnumerateAzureBlobs.ps1\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\Invoke-EnumerateAzureBlobs.ps1\""
+        },
+        {
+          "description": "The wordlist file for search permutations must exist in PathToAtomicsFolder\\..\\ExternalPayloads.",
+          "prereq_command": "if (test-path \"#{wordlist}\"){exit 0} else {exit 1}",
+          "get_prereq_command": "invoke-webrequest \"https://raw.githubusercontent.com/NetSPI/MicroBurst/156c4e9f4253b482b2b68eda4651116b9f0f2e17/Misc/permutations.txt\" -outfile \"#{wordlist}\""
+        }
+      ],
+      "auto_generated_guid": "3dab4bcc-667f-4459-aea7-4162dd2d6590"
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "attack_technique": "T1518.001",
+  "display_name": "Software Discovery: Security Software Discovery",
+  "atomic_tests": [
+    {
+      "name": "Security Software Discovery",
+      "description": "Methods to identify Security Software on an endpoint\n\nwhen sucessfully executed, the test is going to display running processes, firewall configuration on network profiles\nand specific security software.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "netsh.exe advfirewall  show allprofiles \nnetsh.exe advfirewall firewall dump\nnetsh.exe advfirewall show currentprofile\nnetsh.exe advfirewall firewall show rule name=all\nnetsh.exe firewall show state\nnetsh.exe firewall show config\nsc query windefend\npowershell.exe /c \"Get-Process | Where-Object { $_.ProcessName -eq 'Sysmon' }\"\npowershell.exe /c \"Get-Service | where-object {$_.DisplayName -like '*sysm*'}\"\npowershell.exe /c \"Get-CimInstance Win32_Service -Filter 'Description = ''System Monitor service'''\"\ntasklist.exe\ntasklist.exe | findstr /i virus\ntasklist.exe | findstr /i cb\ntasklist.exe | findstr /i defender\ntasklist.exe | findstr /i cylance\ntasklist.exe | findstr /i mc\ntasklist.exe | findstr /i \"virus cb defender cylance mc\""
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "f92a380f-ced9-491f-b338-95a991418ce2"
+    },
+    {
+      "name": "Security Software Discovery - powershell",
+      "description": "Methods to identify Security Software on an endpoint\n\nwhen sucessfully executed, powershell is going to processes related AV products if they are running.\nNote that, depending on the privilege of current user, get-process | ?{$_.Description -like \"*\"} may not return the processes related to AV products of the check.\nFor instance, only with Administrator right, you can see the process description of McAffee processes. Hence, it is better to use get-process | ?{$_.ProcessName -like \"*\"},\nif you know the name of those processes.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "get-process | ?{$_.Description -like \"*virus*\"}\nget-process | ?{$_.Description -like \"*carbonblack*\"}\nget-process | ?{$_.Description -like \"*defender*\"}\nget-process | ?{$_.Description -like \"*cylance*\"}\nget-process | ?{$_.Description -like \"*mc*\"}\nget-process | ?{$_.ProcessName -like \"*mc*\"}\nget-process | Where-Object { $_.ProcessName -eq \"Sysmon\" }"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "7f566051-f033-49fb-89de-b6bacab730f0"
+    },
+    {
+      "name": "Security Software Discovery - ps (macOS)",
+      "description": "Methods to identify Security Software on an endpoint\nwhen sucessfully executed, command shell  is going to display AV/Security software it is running.",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ps aux | egrep 'Little\\ Snitch|CbOsxSensorService|falcond|nessusd|santad|CbDefense|td-agent|packetbeat|filebeat|auditbeat|osqueryd|BlockBlock|LuLu'"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "ba62ce11-e820-485f-9c17-6f3c857cd840"
+    },
+    {
+      "name": "Security Software Discovery - ps (Linux)",
+      "description": "Methods to identify Security Software on an endpoint\nwhen sucessfully executed, command shell  is going to display AV/Security software it is running.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ps aux | egrep 'falcond|nessusd|cbagentd|td-agent|packetbeat|filebeat|auditbeat|osqueryd'"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "23b91cd2-c99c-4002-9e41-317c63e024a2"
+    },
+    {
+      "name": "Security Software Discovery - pgrep (FreeBSD)",
+      "description": "Methods to identify Security Software on an endpoint\nwhen sucessfully executed, command shell is going to display AV/Security software it is running.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "pgrep -l 'bareos-fd|icinga2|cbagentd|wazuh-agent|packetbeat|filebeat|osqueryd'"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "fa96c21c-5fd6-4428-aa28-51a2fbecdbdc"
+    },
+    {
+      "name": "Security Software Discovery - Sysmon Service",
+      "description": "Discovery of an installed Sysinternals Sysmon service using driver altitude (even if the name is changed).\n\nwhen sucessfully executed, the test is going to display sysmon driver instance if it is installed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "fltmc.exe | findstr.exe 385201"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "fe613cf3-8009-4446-9a0f-bc78a15b66c9"
+    },
+    {
+      "name": "Security Software Discovery - AV Discovery via WMI",
+      "description": "Discovery of installed antivirus products via a WMI query.\n\nwhen sucessfully executed, the test is going to display installed AV software.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "wmic.exe /Namespace:\\\\root\\SecurityCenter2 Path AntiVirusProduct Get displayName /Format:List"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "1553252f-14ea-4d3b-8a08-d7a4211aa945"
+    },
+    {
+      "name": "Security Software Discovery - AV Discovery via Get-CimInstance and Get-WmiObject cmdlets",
+      "description": "Discovery of installed antivirus products via Get-CimInstance and Get-WmiObject cmdlets of powershell.\n\nwhen sucessfully executed, information about installed AV software is displayed..",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "powershell Get-CimInstance -Namespace root/securityCenter2 -classname antivirusproduct\npowershell Get-WmiObject -Namespace root\\securitycenter2 -Class antivirusproduct"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "015cd268-996e-4c32-8347-94c80c6286ee"
+    },
+    {
+      "name": "Security Software Discovery - Windows Defender Enumeration",
+      "description": "Windows Defender Enumeration via different built-in windows native tools.\nwhen sucessfully executed, information about windows defender is displayed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "Get-Service WinDefend #check the service state of Windows Defender\nGet-MpComputerStatus #provides the current status of security solution elements, including Anti-Spyware, Antivirus, LoavProtection, Real-time protection, etc\nGet-MpThreat #threats details that have been detected using MS Defender"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "d3415a0e-66ef-429b-acf4-a768876954f6"
+    },
+    {
+      "name": "Security Software Discovery - Windows Firewall Enumeration",
+      "description": "Enumerates windows firewall to retrieves firewall rules from the target computer.\n\nwhen sucessfully executed, details of windows firewall is displayed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "Get-NetFirewallProfile | Format-Table Name, Enabled\nGet-NetFirewallSetting\nGet-NetFirewallRule | select DisplayName, Enabled, Description"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "9dca5a1d-f78c-4a8d-accb-d6de67cfed6b"
+    },
+    {
+      "name": "Get Windows Defender exclusion settings using WMIC",
+      "description": "In this test, a WMIC command is used to probe the local Windows system for the configuration of Windows Defender's exclusions. This command targets the MSFT_MpPreference \nclass within the Windows Management Instrumentation (WMI) namespace, allowing the retrieval of critical settings such as disabled real-time monitoring and specified \nexclusion paths, file extensions, and processes. Attackers might use this approach to understand what is excluded from antivirus scans, enabling further exploitation.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "wmic /Node:localhost /Namespace:\\\\root\\Microsoft\\Windows\\Defender Path MSFT_MpPreference Get /format:list | findstr /i /C:\"DisableRealtimeMonitoring\" /C:\"ExclusionPath\" /C:\"ExclusionExtension\" /C:\"ExclusionProcess\""
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "e31564c8-4c60-40cd-a8f4-9261307e8336"
+    }
+  ]
+}

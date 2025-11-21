@@ -1,0 +1,213 @@
+{
+  "attack_technique": "T1548.001",
+  "display_name": "Abuse Elevation Control Mechanism: Setuid and Setgid",
+  "atomic_tests": [
+    {
+      "name": "Make and modify binary from C source",
+      "description": "Make, change owner, and change file attributes on a C source code file",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "sudo rm /tmp/hello\nsudo rm /tmp/hello.c",
+        "procedure": "cp #{payload} /tmp/hello.c\nsudo chown root /tmp/hello.c\nsudo make /tmp/hello\nsudo chown root /tmp/hello\nsudo chmod u+s /tmp/hello\n/tmp/hello"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "payload",
+          "description": "hello.c payload",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1548.001/src/hello.c"
+        }
+      ],
+      "auto_generated_guid": "896dfe97-ae43-4101-8e96-9a7996555d80"
+    },
+    {
+      "name": "Make and modify binary from C source (freebsd)",
+      "description": "Make, change owner, and change file attributes on a C source code file",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "rm /tmp/hello\nrm /tmp/hello.c",
+        "procedure": "cp #{payload} /tmp/hello.c\nchown root /tmp/hello.c\nmake /tmp/hello\nchown root /tmp/hello\nchmod u+s /tmp/hello\n/tmp/hello"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "payload",
+          "description": "hello.c payload",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1548.001/src/hello.c"
+        }
+      ],
+      "auto_generated_guid": "dd580455-d84b-481b-b8b0-ac96f3b1dc4c"
+    },
+    {
+      "name": "Set a SetUID flag on file",
+      "description": "This test sets the SetUID flag on a file in FreeBSD.",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "sudo rm #{file_to_setuid}",
+        "procedure": "sudo touch #{file_to_setuid}\nsudo chown root #{file_to_setuid}\nsudo chmod u+xs #{file_to_setuid}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "file_to_setuid",
+          "description": "Path of file to set SetUID flag",
+          "type": "path",
+          "default": "/tmp/evilBinary"
+        }
+      ],
+      "auto_generated_guid": "759055b3-3885-4582-a8ec-c00c9d64dd79"
+    },
+    {
+      "name": "Set a SetUID flag on file (freebsd)",
+      "description": "This test sets the SetUID flag on a file in FreeBSD.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "rm #{file_to_setuid}",
+        "procedure": "touch #{file_to_setuid}\nchown root #{file_to_setuid}\nchmod u+xs #{file_to_setuid}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "file_to_setuid",
+          "description": "Path of file to set SetUID flag",
+          "type": "path",
+          "default": "/tmp/evilBinary"
+        }
+      ],
+      "auto_generated_guid": "9be9b827-ff47-4e1b-bef8-217db6fb7283"
+    },
+    {
+      "name": "Set a SetGID flag on file",
+      "description": "This test sets the SetGID flag on a file in Linux and macOS.",
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "sudo rm #{file_to_setuid}",
+        "procedure": "sudo touch #{file_to_setuid}\nsudo chown root #{file_to_setuid}\nsudo chmod g+xs #{file_to_setuid}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "file_to_setuid",
+          "description": "Path of file to set SetGID flag",
+          "type": "path",
+          "default": "/tmp/evilBinary"
+        }
+      ],
+      "auto_generated_guid": "db55f666-7cba-46c6-9fe6-205a05c3242c"
+    },
+    {
+      "name": "Set a SetGID flag on file (freebsd)",
+      "description": "This test sets the SetGID flag on a file in FreeBSD.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "rm #{file_to_setuid}",
+        "procedure": "touch #{file_to_setuid}\nchown root #{file_to_setuid}\nchmod g+xs #{file_to_setuid}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "file_to_setuid",
+          "description": "Path of file to set SetGID flag",
+          "type": "path",
+          "default": "/tmp/evilBinary"
+        }
+      ],
+      "auto_generated_guid": "1f73af33-62a8-4bf1-bd10-3bea931f2c0d"
+    },
+    {
+      "name": "Make and modify capabilities of a binary",
+      "description": "Make and modify [capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) of a C source code file.\nThe binary doesn't have to modify the UID, but the binary is given the capability to arbitrarily modify it at any time with `setuid(0)`.\nWithout being owned by root, the binary can set the UID to 0.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "rm /tmp/cap\nrm /tmp/cap.c",
+        "procedure": "cp #{payload} /tmp/cap.c\nmake /tmp/cap\nsudo setcap cap_setuid=ep /tmp/cap\n/tmp/cap"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "payload",
+          "description": "cap.c payload",
+          "type": "path",
+          "default": "PathToAtomicsFolder/T1548.001/src/cap.c"
+        }
+      ],
+      "auto_generated_guid": "db53959c-207d-4000-9e7a-cd8eb417e072"
+    },
+    {
+      "name": "Provide the SetUID capability to a file",
+      "description": "This test gives a file the capability to set UID without using flags.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "rm #{file_to_setcap}",
+        "procedure": "touch #{file_to_setcap}\nsudo setcap cap_setuid=ep #{file_to_setcap}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "file_to_setcap",
+          "description": "Path of file to provide the SetUID capability",
+          "type": "path",
+          "default": "/tmp/evilBinary"
+        }
+      ],
+      "auto_generated_guid": "1ac3272f-9bcf-443a-9888-4b1d3de785c1"
+    },
+    {
+      "name": "Do reconnaissance for files that have the setuid bit set",
+      "description": "This test simulates a command that can be run to enumerate files that have the setuid bit set",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "find /usr/bin -perm -4000"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "8e36da01-cd29-45fd-be72-8a0fcaad4481"
+    },
+    {
+      "name": "Do reconnaissance for files that have the setgid bit set",
+      "description": "This test simulates a command that can be run to enumerate files that have the setgid bit set",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "find /usr/bin -perm -2000"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "3fb46e17-f337-4c14-9f9a-a471946533e2"
+    }
+  ]
+}

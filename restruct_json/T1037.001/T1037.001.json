@@ -1,0 +1,34 @@
+{
+  "attack_technique": "T1037.001",
+  "display_name": "Boot or Logon Initialization Scripts: Logon Script (Windows)",
+  "atomic_tests": [
+    {
+      "name": "Logon Scripts",
+      "description": "Adds a registry value to run batch script created in the %temp% directory. Upon execution, there will be a new environment variable in the HKCU\\Environment key\nthat can be viewed in the Registry Editor.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "REG.exe DELETE HKCU\\Environment /v UserInitMprLogonScript /f >nul 2>&1\ndel #{script_path} >nul 2>&1\ndel \"%USERPROFILE%\\desktop\\T1037.001-log.txt\" >nul 2>&1",
+        "procedure": "echo \"#{script_command}\" > #{script_path}\nREG.exe ADD HKCU\\Environment /v UserInitMprLogonScript /t REG_SZ /d \"#{script_path}\" /f"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "script_path",
+          "description": "Path to .bat file",
+          "type": "string",
+          "default": "%temp%\\art.bat"
+        },
+        {
+          "arg_name": "script_command",
+          "description": "Command To Execute",
+          "type": "string",
+          "default": "echo Art \"Logon Script\" atomic test was successful. >> %USERPROFILE%\\desktop\\T1037.001-log.txt"
+        }
+      ],
+      "auto_generated_guid": "d6042746-07d4-4c92-9ad8-e644c114a231"
+    }
+  ]
+}

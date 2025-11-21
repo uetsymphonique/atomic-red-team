@@ -1,0 +1,168 @@
+{
+  "attack_technique": "T1526",
+  "display_name": "Cloud Service Discovery",
+  "atomic_tests": [
+    {
+      "name": "Azure - Dump Subscription Data with MicroBurst",
+      "description": "Upon successful execution, this test will enumerate all resources that are contained within a valid Azure subscription. \nThe resources enumerated will display on screen, as well as several csv files and folders will be output to a specified directory, listing what resources were discovered by the script. \nSee https://dev.to/cheahengsoon/enumerating-subscription-information-with-microburst-35a1",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "remove-item #{output_directory} -recurse -force -erroraction silentlycontinue",
+        "procedure": "import-module \"PathToAtomicsFolder\\..\\ExternalPayloads\\Get-AzDomainInfo.ps1\"\n$Password = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Password\nConnect-AzAccount -Credential $Credential | out-null\nGet-AzDomainInfo -folder #{output_directory} -subscription \"#{subscription_name}\" -verbose"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure AD username",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure AD password",
+          "type": "string",
+          "default": "T1082Az"
+        },
+        {
+          "arg_name": "output_directory",
+          "description": "Directory to output results to",
+          "type": "string",
+          "default": "$env:temp\\T1526Test1"
+        },
+        {
+          "arg_name": "subscription_name",
+          "description": "Azure subscription name to scan",
+          "type": "string",
+          "default": null
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The Get-AzDomainInfo script must exist in PathToAtomicsFolder\\..\\ExternalPayloads.",
+          "prereq_command": "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\Get-AzDomainInfo.ps1\"){exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\ninvoke-webrequest \"https://raw.githubusercontent.com/NetSPI/MicroBurst/c771c665a2c71f9c5ba474869cd1c211ebee68fd/Az/Get-AzDomainInfo.ps1\" -outfile \"PathToAtomicsFolder\\..\\ExternalPayloads\\Get-AzDomainInfo.ps1\""
+        },
+        {
+          "description": "The Az module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az -Force"
+        }
+      ],
+      "auto_generated_guid": "1e40bb1d-195e-401e-a86b-c192f55e005c"
+    },
+    {
+      "name": "AWS - Enumerate common cloud services",
+      "description": "Upon successful execution, this test will enumerate common resources that are contained within a valid AWS account.",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Import-Module \"PathToAtomicsFolder\\T1526\\src\\AWSDiscovery.ps1\"\n$access_key = \"#{access_key}\"\n$secret_key = \"#{secret_key}\"\n$session_token = \"#{session_token}\"\n$aws_profile = \"#{profile}\"\n$regions = \"#{regions}\"\nSet-AWSAuthentication -AccessKey $access_key -SecretKey $secret_key -SessionToken $session_token -AWSProfile $aws_profile\nGet-AWSDiscoveryData -Regions $regions -OutputDirectory \"#{output_directory}\"\nRemove-BlankFiles -OutputDirectory \"#{output_directory}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "access_key",
+          "description": "AWS Access Key",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "secret_key",
+          "description": "AWS Secret Key",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "session_token",
+          "description": "AWS Session Token",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "profile",
+          "description": "AWS profile",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "regions",
+          "description": "AWS regions",
+          "type": "string",
+          "default": "us-east-1,us-east-2,us-west-1,us-west-2"
+        },
+        {
+          "arg_name": "output_directory",
+          "description": "Directory to output results to",
+          "type": "string",
+          "default": "$env:TMPDIR/aws_discovery"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The AWS PowerShell module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name AWSPowerShell -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AWSPowerShell -Force"
+        }
+      ],
+      "auto_generated_guid": "aa8b9bcc-46fa-4a59-9237-73c7b93a980c"
+    },
+    {
+      "name": "Azure - Enumerate common cloud services",
+      "description": "Upon successful execution, this test will enumerate common resources that are contained within a valid Azure subscription.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Import-Module \"PathToAtomicsFolder\\T1526\\src\\AzureDiscovery.ps1\"\n$client_id = \"#{client_id}\"\n$client_secret = \"#{client_secret}\"\n$tenant_id = \"#{tenant_id}\"\n$environment = \"#{cloud}\"\nSet-AzureAuthentication -ClientID $client_id -ClientSecret $client_secret -TenantID $tenant_id -Environment $environment\nGet-AzureDiscoveryData -OutputDirectory \"#{output_directory}\" -Environment $environment\nRemove-BlankFiles -OutputDirectory \"#{output_directory}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "client_id",
+          "description": "Azure AD client ID",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "client_secret",
+          "description": "Azure AD client secret",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "tenant_id",
+          "description": "Azure AD tenant ID",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "cloud",
+          "description": "Azure cloud environment",
+          "type": "string",
+          "default": "AzureCloud"
+        },
+        {
+          "arg_name": "output_directory",
+          "description": "Directory to output results to",
+          "type": "string",
+          "default": "$env:TMPDIR/azure_discovery"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The Az module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az -Force"
+        }
+      ],
+      "auto_generated_guid": "58f57c8f-db14-4e62-a4d3-5aaf556755d7"
+    }
+  ]
+}

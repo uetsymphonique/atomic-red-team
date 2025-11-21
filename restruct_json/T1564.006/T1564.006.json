@@ -1,0 +1,140 @@
+{
+  "attack_technique": "T1564.006",
+  "display_name": "Run Virtual Instance",
+  "atomic_tests": [
+    {
+      "name": "Register Portable Virtualbox",
+      "description": "ransomware payloads via virtual machines (VM). \n[Maze ransomware](https://threatpost.com/maze-ransomware-ragnar-locker-virtual-machine/159350/)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "sc stop VBoxDRV\nsc delete VBoxDRV\nregsvr32 /u /S \"C:\\Program Files\\Oracle\\VirtualBox\\VboxC.dll\"\nmsiexec /x \"#{msi_file_path}\" /qn",
+        "procedure": "\"C:\\Program Files\\Oracle\\VirtualBox\\VBoxSVC.exe\" /reregserver\nregsvr32 /S \"C:\\Program Files\\Oracle\\VirtualBox\\VboxC.dll\"\nrundll32 \"C:\\Program Files\\Oracle\\VirtualBox\\VBoxRT.dll,RTR3Init\"\nsc create VBoxDRV binpath= \"C:\\Program Files\\Oracle\\VirtualBox\\drivers\\VboxDrv.sys\" type= kernel start= auto error= normal displayname= PortableVBoxDRV\nsc start VBoxDRV"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "msi_file_path",
+          "description": "Path to the MSI file",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1564.006\\bin\\Virtualbox_52.msi"
+        },
+        {
+          "arg_name": "cab_file_path",
+          "description": "Path to the CAB file",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1564.006\\bin\\common.cab"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "MSI file must exist on disk at specified location (#{msi_file_path})",
+          "prereq_command": "if (Test-Path \"#{msi_file_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{msi_file_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1564.006/bin/Virtualbox_52.msi\" -OutFile \"#{msi_file_path}\""
+        },
+        {
+          "description": "CAB file must exist on disk at specified location (#{cab_file_path})",
+          "prereq_command": "if (Test-Path \"#{cab_file_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cab_file_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1564.006/bin/common.cab\" -OutFile \"#{cab_file_path}\""
+        },
+        {
+          "description": "Old version of Virtualbox must be installed",
+          "prereq_command": "if (Test-Path \"C:\\Program Files\\Oracle\\VirtualBox\\VboxC.dll\") {exit 0} else {exit 1}",
+          "get_prereq_command": "msiexec /i \"#{msi_file_path}\" /qn"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "c59f246a-34f8-4e4d-9276-c295ef9ba0dd"
+    },
+    {
+      "name": "Create and start VirtualBox virtual machine",
+      "description": "Create a simple VirtualBox VM and start up the machine\nCleanup command stops and deletes the newly created VM and associated files\nhttps://www.virtualbox.org/manual/ch08.html#vboxmanage-startvm\nhttps://news.sophos.com/en-us/2020/05/21/ragnar-locker-ransomware-deploys-virtual-machine-to-dodge-security/\nhttps://attack.mitre.org/techniques/T1564/006/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "\"#{vboxmanage_exe}\" controlvm \"#{vm_name}\" poweroff\n\"#{vboxmanage_exe}\" unregistervm \"#{vm_name}\" --delete",
+        "procedure": "\"#{vboxmanage_exe}\" createvm --name \"#{vm_name}\" --register\n\"#{vboxmanage_exe}\" modifyvm \"#{vm_name}\" --firmware efi\n\"#{vboxmanage_exe}\" startvm \"#{vm_name}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "vm_name",
+          "description": "Name of the new virtual machine",
+          "type": "string",
+          "default": "Atomic VM"
+        },
+        {
+          "arg_name": "virtualbox_exe",
+          "description": "Path to the VirtualBox executable",
+          "type": "path",
+          "default": "C:\\Program Files\\Oracle\\VirtualBox\\VirtualBox.exe"
+        },
+        {
+          "arg_name": "vboxmanage_exe",
+          "description": "Path to the executable for VBoxManage, the command-line interface to VirtualBox",
+          "type": "path",
+          "default": "C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe"
+        },
+        {
+          "arg_name": "virtualbox_download",
+          "description": "URL for the current installer for the Windows version of VirtualBox, as of March 2022",
+          "type": "url",
+          "default": "https://download.virtualbox.org/virtualbox/6.1.32/VirtualBox-6.1.32-149290-Win.exe"
+        },
+        {
+          "arg_name": "virtualbox_installer",
+          "description": "Executable for the Virtualbox installer",
+          "type": "string",
+          "default": "VirtualBox-6.1.32-149290-Win.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "VirtualBox must exist on disk at specified locations (#{virtualbox_exe})",
+          "prereq_command": "if (Test-Path \"#{virtualbox_exe}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\n$wc = New-Object System.Net.WebClient\n$wc.DownloadFile(\"#{virtualbox_download}\",\"PathToAtomicsFolder\\..\\ExternalPayloads\\#{virtualbox_installer}\")\nstart-process -FilePath \"PathToAtomicsFolder\\..\\ExternalPayloads\\#{virtualbox_installer}\" -ArgumentList \"--silent\" -Wait"
+        },
+        {
+          "description": "VBoxManage must exist on disk at specified locations (#{vboxmanage_exe})",
+          "prereq_command": "if (Test-Path \"#{vboxmanage_exe}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "$wc = New-Object System.Net.WebClient\n$wc.DownloadFile(\"#{virtualbox_download}\",\"PathToAtomicsFolder\\..\\ExternalPayloads\\#{virtualbox_installer}\")\nstart-process -FilePath \"PathToAtomicsFolder\\..\\ExternalPayloads\\#{virtualbox_installer}\" -ArgumentList \"--silent\" -Wait"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "88b81702-a1c0-49a9-95b2-2dd53d755767"
+    },
+    {
+      "name": "Create and start Hyper-V virtual machine",
+      "description": "Create a simple Hyper-V VM (Windows native hypervisor) and start up the machine\nCleanup command stops and deletes the newly created VM\nhttps://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v\nhttps://embracethered.com/blog/posts/2020/shadowbunny-virtual-machine-red-teaming-technique/\nhttps://attack.mitre.org/techniques/T1564/006/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Stop-VM $VM -Force\nRemove-VM $VM -Force",
+        "procedure": "$VM = \"#{vm_name}\"\nNew-VM -Name $VM -Generation 2\nSet-VMFirmware $VM -EnableSecureBoot Off\nStart-VM $VM"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "vm_name",
+          "description": "Name of the new virtual machine",
+          "type": "string",
+          "default": "Atomic VM"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Hyper-V must be enabled on the system",
+          "prereq_command": "if ((Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V).State = \"Enabled\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All -Force"
+        }
+      ],
+      "auto_generated_guid": "fb8d4d7e-f5a4-481c-8867-febf13f8b6d3"
+    }
+  ]
+}

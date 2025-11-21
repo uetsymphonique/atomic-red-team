@@ -1,0 +1,123 @@
+{
+  "attack_technique": "T1037.005",
+  "display_name": "Boot or Logon Initialization Scripts: Startup Items",
+  "atomic_tests": [
+    {
+      "name": "Add file to Local Library StartupItems",
+      "description": "Modify or create an file in /Library/StartupItems\n[Reference](https://www.alienvault.com/blogs/labs-research/diversity-in-recent-mac-malware)",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "sudo rm /Library/StartupItems/EvilStartup.plist",
+        "procedure": "sudo touch /Library/StartupItems/EvilStartup.plist"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "134627c3-75db-410e-bff8-7a920075f198"
+    },
+    {
+      "name": "Add launch script to launch daemon",
+      "description": "Add launch script to /Library/StartupItems to launch agent\n[Example](https://cybersecurity.att.com/blogs/labs-research/diversity-in-recent-mac-malware)",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "cleanup_command": "sudo launchctl unload /tmp/T1037_005_daemon.plist\nsudo rm /tmp/T1037_005_daemon.plist\nsudo rm /Library/StartupItems/atomic.sh\nsudo rm /Library/StartupItems/StartupParameters.plist\nsudo rm /tmp/T1037_005_daemon.txt",
+        "procedure": "sudo cp #{path_startup_params} /Library/StartupItems/StartupParameters.plist\nsudo cp #{path_malicious_script} /Library/StartupItems/atomic.sh\nsudo cp #{path_malicious_plist} /tmp/T1037_005_daemon.plist\nsudo /Library/StartupItems/atomic.sh start"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "path_malicious_script",
+          "description": "Name of script to store in cron folder",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1037.005/src/T1037.005_daemon.sh"
+        },
+        {
+          "arg_name": "path_malicious_plist",
+          "description": "Name of file to store in /tmp",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1037.005/src/T1037_005_daemon.plist"
+        },
+        {
+          "arg_name": "path_startup_params",
+          "description": "Name of plist with startup params",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1037.005/src/StartupParameters.plist"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "/Library/StartupItems must exist",
+          "prereq_command": "if [ ! -d /Library/StartupItems ]; then mkdir /Library/StartupItems; exit 0; fi;",
+          "get_prereq_command": "echo \"Failed to create /Library/StartupItems\"; exit 1;"
+        },
+        {
+          "description": "The shared library must exist on disk at specified location (#{path_malicious_plist})",
+          "prereq_command": "if [ -f #{path_malicious_plist} ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"The plist file doesn't exist. Check the path and try again.\"; exit 1;"
+        },
+        {
+          "description": "The startup script must exist on disk at specified location (#{path_malicious_script})",
+          "prereq_command": "if [ -f #{path_malicious_script} ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"The startup script doesn't exist. Check the path and try again.\"; exit 1;"
+        }
+      ],
+      "auto_generated_guid": "fc369906-90c7-4a15-86fd-d37da624dde6"
+    },
+    {
+      "name": "Add launch script to launch agent",
+      "description": "Add launch script to /Library/StartupItems to launch agent\n[Example](https://cybersecurity.att.com/blogs/labs-research/diversity-in-recent-mac-malware)",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "cleanup_command": "sudo launchctl unload /tmp/T1037_005_agent.plist\nsudo rm /tmp/T1037_005_agent.plist\nsudo rm /Library/StartupItems/atomic.sh\nsudo rm /Library/StartupItems/StartupParameters.plist\nsudo rm /tmp/T1037_005_agent.txt",
+        "procedure": "sudo cp #{path_startup_params} /Library/StartupItems/StartupParameters.plist\nsudo cp #{path_malicious_script} /Library/StartupItems/atomic.sh\nsudo cp #{path_malicious_plist} /tmp/T1037_005_agent.plist\n/Library/StartupItems/atomic.sh start"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "path_malicious_script",
+          "description": "Name of script to store in cron folder",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1037.005/src/T1037.005_agent.sh"
+        },
+        {
+          "arg_name": "path_malicious_plist",
+          "description": "Name of file to store in /tmp",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1037.005/src/T1037_005_agent.plist"
+        },
+        {
+          "arg_name": "path_startup_params",
+          "description": "Name of plist with startup params",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1037.005/src/StartupParameters.plist"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "/Library/StartupItems must exist",
+          "prereq_command": "if [ ! -d /Library/StartupItems ]; then mkdir /Library/StartupItems; exit 0; fi;",
+          "get_prereq_command": "echo \"Failed to create /Library/StartupItems\"; exit 1;"
+        },
+        {
+          "description": "The shared library must exist on disk at specified location (#{path_malicious_plist})",
+          "prereq_command": "if [ -f #{path_malicious_plist} ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"The plist file doesn't exist. Check the path and try again.\"; exit 1;"
+        },
+        {
+          "description": "The startup script must exist on disk at specified location (#{path_malicious_script})",
+          "prereq_command": "if [ -f #{path_malicious_script} ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"The startup script doesn't exist. Check the path and try again.\"; exit 1;"
+        }
+      ],
+      "auto_generated_guid": "10cf5bec-49dd-4ebf-8077-8f47e420096f"
+    }
+  ]
+}

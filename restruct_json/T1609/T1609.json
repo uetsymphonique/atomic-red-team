@@ -1,0 +1,69 @@
+{
+  "attack_technique": "T1609",
+  "display_name": "Kubernetes Exec Into Container",
+  "atomic_tests": [
+    {
+      "name": "ExecIntoContainer",
+      "description": "Attackers who have permissions, can run malicious commands in containers in the cluster using exec command (“kubectl exec”). In this method, attackers can use legitimate images, such as an OS image (e.g., Ubuntu) as a backdoor container, and run their malicious code remotely by using “kubectl exec”.",
+      "supported_platforms": [
+        "containers"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "cleanup_command": "kubectl delete pod busybox -n #{namespace}",
+        "procedure": "kubectl create -f #{path} -n #{namespace}\n# wait 3 seconds for the instance to come up\nsleep 3\nkubectl exec -n #{namespace} busybox -- #{command}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "namespace",
+          "description": "K8s namespace to use",
+          "type": "string",
+          "default": "default"
+        },
+        {
+          "arg_name": "command",
+          "description": "Command to run",
+          "type": "string",
+          "default": "uname"
+        },
+        {
+          "arg_name": "path",
+          "description": "Path to busybox.yaml file",
+          "type": "string",
+          "default": "$PathtoAtomicsFolder/T1609/src/busybox.yaml"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "kubectl must be installed",
+          "prereq_command": "which kubectl",
+          "get_prereq_command": "echo \"kubectl must be installed manually\""
+        }
+      ],
+      "auto_generated_guid": "d03bfcd3-ed87-49c8-8880-44bb772dea4b"
+    },
+    {
+      "name": "Docker Exec Into Container",
+      "description": "Attackers who have permissions, can run malicious commands in containers in the cluster using exec command (“docker exec”). In this method, attackers can use legitimate images, such as an OS image (e.g., Ubuntu) as a backdoor container, and run their malicious code remotely by using “docker exec”. Kinsing (Golang-based malware) was executed with an Ubuntu container entry point that runs shell scripts.",
+      "supported_platforms": [
+        "containers"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "cleanup_command": "docker stop t1609_container\ndocker rmi -f t1609:latest",
+        "procedure": "docker build -t t1609  $PathtoAtomicsFolder/T1609/src/ \ndocker run --name t1609_container --rm -itd t1609 bash /tmp/script.sh\ndocker exec -i t1609_container bash -c \"cat /tmp/output.txt\""
+      },
+      "input_arguments": [],
+      "dependencies": [
+        {
+          "description": "docker must be installed",
+          "prereq_command": "which docker",
+          "get_prereq_command": "if [ \"\" == \"`which docker`\" ]; then echo \"Docker Not Found\"; if [ -n \"`which apt-get`\" ]; then sudo apt-get -y install docker ; elif [ -n \"`which yum`\" ]; then sudo yum -y install docker ; fi ; else echo \"Docker installed\"; fi"
+        }
+      ],
+      "auto_generated_guid": "900e2c49-221b-42ec-ae3c-4717e41e6219"
+    }
+  ]
+}

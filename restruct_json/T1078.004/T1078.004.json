@@ -1,0 +1,167 @@
+{
+  "attack_technique": "T1078.004",
+  "display_name": "Valid Accounts: Cloud Accounts",
+  "atomic_tests": [
+    {
+      "name": "Creating GCP Service Account and Service Account Key",
+      "description": "GCP Service Accounts can be used to gain intial access as well as maintain persistence inside Google Cloud.",
+      "supported_platforms": [
+        "google-workspace",
+        "iaas:gcp"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "gcloud iam service-accounts delete #{service-account-email} --quiet",
+        "procedure": "gcloud config set project #{project-id}\ngcloud iam service-accounts create #{service-account-name}\ngcloud iam service-accounts keys create #{output-key-file} --iam-account=#{service-account-email}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "project-id",
+          "description": "ID of the project, you want to create service account as well as service account key for",
+          "type": "string",
+          "default": "art-project-1"
+        },
+        {
+          "arg_name": "service-account-name",
+          "description": "Name of the service account",
+          "type": "string",
+          "default": "gcp-art-service-account-1"
+        },
+        {
+          "arg_name": "service-account-email",
+          "description": "Email of the service account",
+          "type": "string",
+          "default": "gcp-art-service-account-1@art-project-1.iam.gserviceaccount.com"
+        },
+        {
+          "arg_name": "output-key-file",
+          "description": "Email of the service account",
+          "type": "string",
+          "default": "gcp-art-service-account-1.json"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Requires gcloud",
+          "prereq_command": "if [ -x \"$(command -v gcloud)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"Please Install Google Cloud SDK before running this atomic test : https://cloud.google.com/sdk/docs/install\""
+        },
+        {
+          "description": "Check if user is logged in",
+          "prereq_command": "gcloud config get-value account",
+          "get_prereq_command": "gcloud auth login --no-launch-browser"
+        }
+      ],
+      "auto_generated_guid": "9fdd83fd-bd53-46e5-a716-9dec89c8ae8e"
+    },
+    {
+      "name": "Azure Persistence Automation Runbook Created or Modified",
+      "description": "Identifies when an Azure Automation runbook is created or modified. An adversary may create or modify an Azure\nAutomation runbook to execute malicious code and maintain persistence in their target's environment.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-AzAutomationRunbook -AutomationAccountName #{automation_account_name} -Name #{runbook_name} -ResourceGroupName #{resource_group} -Force\nRemove-AzAutomationAccount -ResourceGroupName #{resource_group} -Name #{automation_account_name} -Force\nRemove-AzResourceGroup -Name #{resource_group} -Force\necho \"Cleanup should be completed. Run 'terraform destroy` to ensure remaining resources are also deleted.\"\ncd \"$PathToAtomicsFolder/T1078.004/src/T1078.004-2/\"\nterraform destroy -auto-approve",
+        "procedure": "New-AzAutomationRunbook -Name #{runbook_name} -Type PowerShell -ResourceGroupName #{resource_group} -Description 'my-test-runbook' -AutomationAccountName #{automation_account_name}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "resource_group",
+          "description": "Name of the resource group",
+          "type": "string",
+          "default": "ART-ResourceGroupName-T1078-004"
+        },
+        {
+          "arg_name": "runbook_name",
+          "description": "Name of the runbook name",
+          "type": "string",
+          "default": "ART-RunbookName-T1078-004"
+        },
+        {
+          "arg_name": "automation_account_name",
+          "description": "Name of the automation account name",
+          "type": "string",
+          "default": "ART-AutomationAccountName-T1078-004"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Check if terraform is installed.",
+          "prereq_command": "terraform version",
+          "get_prereq_command": "echo \"Please install terraform via https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli (URL accurate as of Nov. 15, 2024).\""
+        },
+        {
+          "description": "Check if Azure CLI and Azure Powershell are installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri https://aka.ms/installazurecliwindowsx64 -OutFile .\\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; Remove-Item .\\AzureCLI.msi"
+        },
+        {
+          "description": "Check if the user is logged into Azure.",
+          "prereq_command": "try {if (-not (Get-AzContext)) { exit 1 } else { exit 0 }} catch {exit 1}",
+          "get_prereq_command": "echo \"* Configure your Azure account using: Connect-AzAccount\""
+        },
+        {
+          "description": "Create dependency resources using terraform",
+          "prereq_command": "try {if (Test-Path \"$PathToAtomicsFolder/T1078.004/src/T1078.004-2/terraform.tfstate\" ){ exit 0 } else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "echo \"Navigating to: $PathToAtomicsFolder/T1078.004/src/T1078.004-2/\"\ncd \"$PathToAtomicsFolder/T1078.004/src/T1078.004-2/\"\nterraform init\nterraform apply -auto-approve"
+        }
+      ],
+      "auto_generated_guid": "348f4d14-4bd3-4f6b-bd8a-61237f78b3ac"
+    },
+    {
+      "name": "GCP - Create Custom IAM Role",
+      "description": "This atomic will create a new IAM role. The default role permissions are: *IAM Service Account Get*. The idea for this Atomic came from a Rule published by the Elastic team.\n\nIdentifies an Identity and Access Management (IAM) custom role creation in Google Cloud Platform (GCP). \nCustom roles are user-defined, and allow for the bundling of one or more supported permissions to meet specific needs. \nCustom roles will not be updated automatically and could lead to privilege creep if not carefully scrutinized.\n\nThis atomic will create a new IAM role. The default role permissions are: *IAM Service Account Get*\n\nReference: https://github.com/elastic/detection-rules/blob/main/rules/integrations/gcp/initial_access_gcp_iam_custom_role_creation.toml",
+      "supported_platforms": [
+        "iaas:gcp"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "gcloud iam roles delete #{role-name} --project=#{project-id}",
+        "procedure": "gcloud config set project #{project-id}\ngcloud iam roles create #{role-name} --description=\"#{role-description}\" --permissions=#{roles} --project=#{project-id}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "project-id",
+          "description": "ID of the GCP Project you to execute the command against.",
+          "type": "string",
+          "default": "atomic-test-1"
+        },
+        {
+          "arg_name": "role-name",
+          "description": "The name of the role to be created.",
+          "type": "string",
+          "default": "AtomicRedTeamRole"
+        },
+        {
+          "arg_name": "role-description",
+          "description": "The description of the role to be created.",
+          "type": "string",
+          "default": "Atomic Red Team Custom IAM Role"
+        },
+        {
+          "arg_name": "roles",
+          "description": "List of roles to be applied",
+          "type": "string",
+          "default": "iam.serviceAccounts.get"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Requires gcloud",
+          "prereq_command": "if [ -x \"$(command -v gcloud)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"Please Install Google Cloud SDK before running this atomic test : https://cloud.google.com/sdk/docs/install\""
+        },
+        {
+          "description": "Check if user is logged in",
+          "prereq_command": "gcloud config get-value account",
+          "get_prereq_command": "gcloud auth login --no-launch-browser"
+        }
+      ],
+      "auto_generated_guid": "3a159042-69e6-4398-9a69-3308a4841c85"
+    }
+  ]
+}

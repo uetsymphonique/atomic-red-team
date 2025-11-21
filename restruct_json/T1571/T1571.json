@@ -1,0 +1,68 @@
+{
+  "attack_technique": "T1571",
+  "display_name": "Non-Standard Port",
+  "atomic_tests": [
+    {
+      "name": "Testing usage of uncommonly used port with PowerShell",
+      "description": "Testing uncommonly used port utilizing PowerShell. APT33 has been known to attempt telnet over port 8081. Upon execution, details about the successful\nport check will be displayed.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Test-NetConnection -ComputerName #{domain} -port #{port}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "port",
+          "description": "Specify uncommon port number",
+          "type": "string",
+          "default": "8081"
+        },
+        {
+          "arg_name": "domain",
+          "description": "Specify target hostname",
+          "type": "string",
+          "default": "google.com"
+        }
+      ],
+      "auto_generated_guid": "21fe622f-8e53-4b31-ba83-6d333c2583f4"
+    },
+    {
+      "name": "Testing usage of uncommonly used port",
+      "description": "Testing uncommonly used port utilizing telnet.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "echo quit | telnet #{domain} #{port}\nexit 0"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "port",
+          "description": "Specify uncommon port number",
+          "type": "string",
+          "default": "8081"
+        },
+        {
+          "arg_name": "domain",
+          "description": "Specify target hostname",
+          "type": "string",
+          "default": "google.com"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Requires telnet",
+          "prereq_command": "which telnet",
+          "get_prereq_command": "echo \"please install telnet to run this test\"; exit 1"
+        }
+      ],
+      "auto_generated_guid": "5db21e1d-dd9c-4a50-b885-b1e748912767"
+    }
+  ]
+}

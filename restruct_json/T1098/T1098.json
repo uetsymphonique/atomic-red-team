@@ -1,0 +1,628 @@
+{
+  "attack_technique": "T1098",
+  "display_name": "Account Manipulation",
+  "atomic_tests": [
+    {
+      "name": "Admin Account Manipulate",
+      "description": "Manipulate Admin Account Name",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "$list = Get-LocalUser |?{$_.Description -like \"atr:*\"}\nforeach($u in $list) {\n  $u.Description -match \"atr:(?<Name>[^;]+);(?<Description>.*)\"\n  Set-LocalUser -Name $u.Name -Description $Matches.Description\n  Rename-LocalUser -Name $u.Name -NewName $Matches.Name\n  Write-Host \"Successfully Reverted Account $($u.Name) to $($Matches.Name) on \" $Env:COMPUTERNAME\n}",
+        "procedure": "$x = Get-Random -Minimum 2 -Maximum 9999\n$y = Get-Random -Minimum 2 -Maximum 9999\n$z = Get-Random -Minimum 2 -Maximum 9999\n$w = Get-Random -Minimum 2 -Maximum 9999\nWrite-Host HaHa_$x$y$z\n\n$fmm = Get-LocalGroupMember -Group Administrators |?{ $_.ObjectClass -match \"User\" -and $_.PrincipalSource -match \"Local\"} | Select Name\n\nforeach($member in $fmm) {\n    if($member -like \"*Administrator*\") {\n        $account = $member.Name.Split(\"\\\")[-1] # strip computername\\\n        $originalDescription = (Get-LocalUser -Name $account).Description\n        Set-LocalUser -Name $account -Description \"atr:$account;$originalDescription\".Substring(0,48) # Keep original name in description\n        Rename-LocalUser -Name $account -NewName \"HaHa_$x$y$z\" # Required due to length limitation\n        Write-Host \"Successfully Renamed $account Account on \" $Env:COMPUTERNAME\n        }\n    }"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "5598f7cb-cf43-455e-883a-f6008c5d46af"
+    },
+    {
+      "name": "Domain Account and Group Manipulate",
+      "description": "Create a random atr-nnnnnnnn account and add it to a domain group (by default, Domain Admins). \n\nThe quickest way to run it is against a domain controller, using `-Session` of `Invoke-AtomicTest`. Alternatively,\nyou need to install PS Module ActiveDirectory (in prereqs) and run the script with appropriare AD privileges to \ncreate the user and alter the group. Automatic installation of the dependency requires an elevated session, \nand is unlikely to work with Powershell Core (untested).\n\nIf you consider running this test against a production Active Directory, the good practise is to create a dedicated\nservice account whose delegation is given onto a dedicated OU for user creation and deletion, as well as delegated\nas group manager of the target group.\n\nExample: `Invoke-AtomicTest -Session $session 'T1098' -TestNames \"Domain Account and Group Manipulate\" -InputArgs @{\"group\" = \"DNSAdmins\" }`",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Get-ADUser -LDAPFilter \"(&(samaccountname=#{account_prefix}-*)(givenName=Test))\" | Remove-ADUser -Confirm:$False",
+        "procedure": "$x = Get-Random -Minimum 2 -Maximum 99\n$y = Get-Random -Minimum 2 -Maximum 99\n$z = Get-Random -Minimum 2 -Maximum 99\n$w = Get-Random -Minimum 2 -Maximum 99\n\nImport-Module ActiveDirectory\n$account = \"#{account_prefix}-$x$y$z\"\nNew-ADUser -Name $account -GivenName \"Test\" -DisplayName $account -SamAccountName $account -Surname $account -Enabled:$False #{create_args}\nAdd-ADGroupMember \"#{group}\" $account"
+      },
+      "input_arguments": [],
+      "dependencies": [
+        {
+          "description": "PS Module ActiveDirectory",
+          "prereq_command": "Try {\n    Import-Module ActiveDirectory -ErrorAction Stop | Out-Null\n    exit 0\n} \nCatch {\n    exit 1\n}",
+          "get_prereq_command": "if((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1) {\n  Add-WindowsCapability -Name (Get-WindowsCapability -Name RSAT.ActiveDirectory.DS* -Online).Name -Online\n} else {\n  Install-WindowsFeature RSAT-AD-PowerShell\n}"
+        }
+      ],
+      "auto_generated_guid": "a55a22e9-a3d3-42ce-bd48-2653adb8f7a9"
+    },
+    {
+      "name": "AWS - Create a group and add a user to that group",
+      "description": "Adversaries create AWS group, add users to specific to that group to elevate their privileges to gain more accesss",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "aws iam remove-user-from-group --user-name #{username} --group-name #{username}\naws iam delete-group --group-name #{username}",
+        "procedure": "aws iam create-group --group-name #{username}\naws iam add-user-to-group --user-name #{username} --group-name #{username}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Name of the AWS group to create",
+          "type": "string",
+          "default": "atomicredteam"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Check if the user exists, we can only add a user to a group if the user exists.",
+          "prereq_command": "aws iam list-users | grep #{username}",
+          "get_prereq_command": "echo Please run atomic test T1136.003, before running this atomic test"
+        }
+      ],
+      "auto_generated_guid": "8822c3b0-d9f9-4daf-a043-49f110a31122"
+    },
+    {
+      "name": "Azure AD - adding user to Azure AD role",
+      "description": "The adversaries want to add user to some Azure AD role. Threat actor \nmay be interested primarily in highly privileged roles, e.g. Global Administrator, Application Administrator, \nPrivileged Authentication Administrator (this role can reset Global Administrator password!).\nBy default, the role Global Reader is assigned to the user principal in this test.\n\nThe account you use to run the PowerShell command should have Privileged Role Administrator or Global Administrator role in your Azure AD.\n\nDetection hint - check Activity \"Add member to role\" in Azure AD Audit Logs. In targer you will also see User as a type.",
+      "supported_platforms": [
+        "azure-ad"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Import-Module -Name AzureAD -ErrorAction Ignore\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzureAD -Credential $Credential -ErrorAction Ignore\n\n$user = Get-AzureADUser -Filter \"DisplayName eq '#{user_principal_name}' or UserPrincipalName eq '#{user_principal_name}'\"\nif ($user -eq $null) { Write-Warning \"User not found\"; exit }\n$role = Get-AzureADDirectoryRole -Filter \"DisplayName eq '#{role_name}'\"\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\n\nRemove-AzureADDirectoryRoleMember -ObjectId $role.ObjectId -MemberId $user.ObjectId\nWrite-Host \"User $($user.DisplayName) was removed from $($role.DisplayName) role\"",
+        "procedure": "Import-Module -Name AzureAD\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzureAD -Credential $Credential\n\n$user = Get-AzureADUser -Filter \"DisplayName eq '#{user_principal_name}' or UserPrincipalName eq '#{user_principal_name}'\"\nif ($user -eq $null) { Write-Warning \"User not found\"; exit }\n$role = Get-AzureADDirectoryRole -Filter \"DisplayName eq '#{role_name}'\"\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\nAdd-AzureADDirectoryRoleMember -ObjectId $role.ObjectId -RefObjectId $user.ObjectId\nWrite-Host \"User $($user.DisplayName) was added to $($role.DisplayName) role\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure AD username",
+          "type": "string",
+          "default": "jonh@contoso.com"
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure AD password",
+          "type": "string",
+          "default": "p4sswd"
+        },
+        {
+          "arg_name": "user_principal_name",
+          "description": "Display Name, or User Principal Name, of the targeted user principal",
+          "type": "string",
+          "default": "SuperUser"
+        },
+        {
+          "arg_name": "role_name",
+          "description": "Name of the targeted Azure AD role",
+          "type": "string",
+          "default": "Global Reader"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "AzureAD module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name AzureAD -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AzureAD -Force"
+        }
+      ],
+      "auto_generated_guid": "0e65ae27-5385-46b4-98ac-607a8ee82261"
+    },
+    {
+      "name": "Azure AD - adding service principal to Azure AD role",
+      "description": "The adversaries want to add service principal to some Azure AD role. Threat actor \nmay be interested primarily in highly privileged roles, e.g. Global Administrator, Application Administrator, \nPrivileged Authentication Administrator (this role can reset Global Administrator password!).\nBy default, the role Global Reader is assigned to service principal in this test.\n\nThe account you use to run the PowerShell command should have Privileged Role Administrator or Global Administrator role in your Azure AD.\n\nDetection hint - check Activity \"Add member to role\" in Azure AD Audit Logs. In targer you will also see Service Principal as a type.",
+      "supported_platforms": [
+        "azure-ad"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Import-Module -Name AzureAD -ErrorAction Ignore\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzureAD -Credential $Credential -ErrorAction Ignore\n\n$sp = Get-AzureADServicePrincipal -Filter \"DisplayName eq '#{service_principal_name}'\"\nif ($sp -eq $null) { Write-Warning \"Service Principal not found\"; exit }\n$role = Get-AzureADDirectoryRole -Filter \"DisplayName eq '#{role_name}'\"\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\n\nRemove-AzureADDirectoryRoleMember -ObjectId $role.ObjectId -MemberId $sp.ObjectId\nWrite-Host \"Service Principal $($sp.DisplayName) was removed from $($role.DisplayName) role\"",
+        "procedure": "Import-Module -Name AzureAD\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzureAD -Credential $Credential\n\n$sp = Get-AzureADServicePrincipal -Filter \"DisplayName eq '#{service_principal_name}'\"\nif ($sp -eq $null) { Write-Warning \"Service Principal not found\"; exit }\n$role = Get-AzureADDirectoryRole -Filter \"DisplayName eq '#{role_name}'\"\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\nAdd-AzureADDirectoryRoleMember -ObjectId $role.ObjectId -RefObjectId $sp.ObjectId\nWrite-Host \"Service Principal $($sp.DisplayName) was added to $($role.DisplayName)\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure AD username",
+          "type": "string",
+          "default": "jonh@contoso.com"
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure AD password",
+          "type": "string",
+          "default": "p4sswd"
+        },
+        {
+          "arg_name": "service_principal_name",
+          "description": "Name of the service principal",
+          "type": "string",
+          "default": "SuperSP"
+        },
+        {
+          "arg_name": "role_name",
+          "description": "Name of the targeted Azure AD role",
+          "type": "string",
+          "default": "Global Reader"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "AzureAD module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name AzureAD -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AzureAD -Force"
+        }
+      ],
+      "auto_generated_guid": "92c40b3f-c406-4d1f-8d2b-c039bf5009e4"
+    },
+    {
+      "name": "Azure - adding user to Azure role in subscription",
+      "description": "The adversaries want to add user to some Azure role, also called Azure resource role. Threat actor \nmay be interested primarily in highly privileged roles, e.g. Owner, Contributor.\nBy default, the role Reader is assigned to user in this test.\n\nNew-AzRoleAssignment cmdlet could be also use to assign user/service principal to resource, resource group and management group.\n\nThe account you use to run the PowerShell command must have Microsoft.Authorization/roleAssignments/write \n(e.g. such as User Access Administrator or Owner) and the Azure Active Directory Graph Directory.Read.All \nand Microsoft Graph Directory.Read.All permissions.\n\nDetection hint - check Operation Name \"Create role assignment\" in subscriptions Activity Logs.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Import-Module -Name AzureAD -ErrorAction Ignore\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzAccount -Credential $Credential -ErrorAction Ignore\n\n$user = Get-AzADUser | where-object {$_.DisplayName -eq \"#{user_principal_name}\" -or $_.UserPrincipalName -eq \"#{user_principal_name}\" }\nif ($user -eq $null) { Write-Warning \"User not found\"; exit }\n$subscription = Get-AzSubscription | where-object {$_.Name -eq \"#{subscription}\"}\nif ($subscription -eq $null) { Write-Warning \"Subscription not found\"; exit }\n$role = Get-AzRoleDefinition | where-object {$_.Name -eq \"#{role_name}\"}\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\n\nRemove-AzRoleAssignment -ObjectId $user.id -RoleDefinitionId $role.id -Scope /subscriptions/$subscription\nWrite-Host \"User Principal $($sp.DisplayName) was removed from $($role.Name) role in subscriptions $($subscriptions.Name)\"",
+        "procedure": "Import-Module -Name Az.Resources\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzAccount -Credential $Credential\n\n$user = Get-AzADUser | where-object {$_.DisplayName -eq \"#{user_principal_name}\" -or $_.UserPrincipalName -eq \"#{user_principal_name}\" }\nif ($user -eq $null) { Write-Warning \"User not found\"; exit }\n$subscription = Get-AzSubscription | where-object {$_.Name -eq \"#{subscription}\"}\nif ($subscription -eq $null) { Write-Warning \"Subscription not found\"; exit }\n$role = Get-AzRoleDefinition | where-object {$_.Name -eq \"#{role_name}\"}\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\n\nNew-AzRoleAssignment -ObjectId $user.id -RoleDefinitionId $role.id -Scope /subscriptions/$subscription\nWrite-Host \"User $($user.DisplayName) was added to $($role.Name) role in subscriptions $($subscriptions.Name)\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure AD username",
+          "type": "string",
+          "default": "jonh@contoso.com"
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure AD password",
+          "type": "string",
+          "default": "p4sswd"
+        },
+        {
+          "arg_name": "user_principal_name",
+          "description": "Display Name, or User Principal Name, of the targeted user principal",
+          "type": "string",
+          "default": "SuperUser"
+        },
+        {
+          "arg_name": "role_name",
+          "description": "Name of the targeted Azure role",
+          "type": "string",
+          "default": "Reader"
+        },
+        {
+          "arg_name": "subscription",
+          "description": "Name of the targeted subscription",
+          "type": "string",
+          "default": "Azure subscription 1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Az.Resources module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az.Resources -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az.Resources -Force"
+        }
+      ],
+      "auto_generated_guid": "1a94b3fc-b080-450a-b3d8-6d9b57b472ea"
+    },
+    {
+      "name": "Azure - adding service principal to Azure role in subscription",
+      "description": "The adversaries want to add service principal to some Azure role, also called Azure resource role. Threat actor \nmay be interested primarily in highly privileged roles, e.g. Owner, Contributor.\nBy default, the role Reader is assigned to service principal in this test.\n\nNew-AzRoleAssignment cmdlet could be also use to assign user/service principal to resource, resource group and management group.\n\nThe account you use to run the PowerShell command must have Microsoft.Authorization/roleAssignments/write \n(e.g. such as User Access Administrator or Owner) and the Azure Active Directory Graph Directory.Read.All \nand Microsoft Graph Directory.Read.All permissions.\n\nDetection hint - check Operation Name \"Create role assignment\" in subscriptions Activity Logs.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Import-Module -Name AzureAD -ErrorAction Ignore\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzAccount -Credential $Credential -ErrorAction Ignore\n\n$sp = Get-AzADServicePrincipal | where-object {$_.DisplayName -eq \"#{service_principal_name}\"}\nif ($sp -eq $null) { Write-Warning \"Service Principal not found\"; exit }\n$subscription = Get-AzSubscription | where-object {$_.Name -eq \"#{subscription}\"} \nif ($subscription -eq $null) { Write-Warning \"Subscription not found\"; exit }\n$role = Get-AzRoleDefinition | where-object {$_.Name -eq \"#{role_name}\"}\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\n\nRemove-AzRoleAssignment -ObjectId $sp.id -RoleDefinitionId $role.id -Scope /subscriptions/$subscription\nWrite-Host \"Service Principal $($sp.DisplayName) was removed from $($role.Name) role in subscriptions $($subscriptions.Name)\"",
+        "procedure": "Import-Module -Name Az.Resources\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzAccount -Credential $Credential\n\n$sp = Get-AzADServicePrincipal | where-object {$_.DisplayName -eq \"#{service_principal_name}\"}\nif ($sp -eq $null) { Write-Warning \"Service Principal not found\"; exit }\n$subscription = Get-AzSubscription | where-object {$_.Name -eq \"#{subscription}\"} \nif ($subscription -eq $null) { Write-Warning \"Subscription not found\"; exit }\n$role = Get-AzRoleDefinition | where-object {$_.Name -eq \"#{role_name}\"}\nif ($role -eq $null) { Write-Warning \"Role not found\"; exit }\n\nNew-AzRoleAssignment -ObjectId $sp.id -RoleDefinitionId $role.id -Scope /subscriptions/$subscription\nWrite-Host \"Service Principal $($sp.DisplayName) was added to $($role.Name) role in subscriptions $($subscriptions.Name)\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure AD username",
+          "type": "string",
+          "default": "jonh@contoso.com"
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure AD password",
+          "type": "string",
+          "default": "p4sswd"
+        },
+        {
+          "arg_name": "service_principal_name",
+          "description": "Name of the service principal",
+          "type": "string",
+          "default": "SuperSP"
+        },
+        {
+          "arg_name": "role_name",
+          "description": "Name of the targeted Azure role",
+          "type": "string",
+          "default": "Reader"
+        },
+        {
+          "arg_name": "subscription",
+          "description": "Name of the targeted subscription",
+          "type": "string",
+          "default": "Azure subscription 1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Az.Resources module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name Az.Resources -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name Az.Resources -Force"
+        }
+      ],
+      "auto_generated_guid": "c8f4bc29-a151-48da-b3be-4680af56f404"
+    },
+    {
+      "name": "Azure AD - adding permission to application",
+      "description": "The adversaries want to add permission to newly created application. Application could be then used for persistence or for further operation in the attacked infrastructure. Permissions like AppRoleAssignment.ReadWrite.All or RoleManagement.ReadWrite.Directory in particular can be a valuable target for a threat actor.\nThis technique will create a new app, with the provided name, and give it the provided permission. But if you prefer to add credentials to an existing app, replace in the code: \"Get-AzureADApplication\" instead of \"New-AzureADServicePrincipal\".\nThe DirectoryRecommendations.Read.All permissions has been selected as the default.\n\nThe account you use to run the PowerShell command should have Global Administrator/Application Administrator/Cloud Application Administrator role in your Azure AD.\n\nDetection hint - check Operation Name \"Add app role assignment to service principal\" in subscriptions Activity Logs.\nYou can also take a look at the materials:\nhttps://learnsentinel.blog/2022/01/04/azuread-privesc-sentinel/\nhttps://github.com/reprise99/Sentinel-Queries\nhttps://docs.google.com/presentation/d/1AWx1w0Xcq8ENvOmSjAJswEgEio-il09QWZlGg9PbHqE/edit#slide=id.g10460eb209c_0_2766\nhttps://gist.github.com/andyrobbins/7c3dd62e6ed8678c97df9565ff3523fb",
+      "supported_platforms": [
+        "azure-ad"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Import-Module -Name AzureAD\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzureAD -Credential $Credential\n\n$aadApplication = @(Get-AzureADApplication -Filter \"DisplayName eq '#{application_name}'\")\nIf ($aadApplication.Count -eq 0)\n{\n  Write-Host \"App not found: cannot delete it\"\n  exit\n}\nElseIf ($aadApplication.Count -gt 1)\n{\n  Write-Host \"Found several app with name '#{application_name}': one is likely the one this technique created, but as a precaution, none will be deleted. Manual cleanup is required.\"\n  exit\n}\nElse\n{\n  Remove-AzureADApplication -ObjectId $aadApplication[0].ObjectId\n  Write-Host \"Successfully deleted app\"\n}",
+        "procedure": "Import-Module -Name AzureAD\n$PWord = ConvertTo-SecureString -String \"#{password}\" -AsPlainText -Force\n$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $Pword\nConnect-AzureAD -Credential $Credential\n\n$aadApplication = New-AzureADApplication -DisplayName \"#{application_name}\"\n$servicePrincipal = New-AzureADServicePrincipal -AppId $aadApplication.AppId\n#$aadApplication = Get-AzureADApplication -Filter \"DisplayName eq '#{application_name}'\"\n\n#Get Service Principal of Microsoft Graph Resource API \n$graphSP = Get-AzureADServicePrincipal -Filter \"DisplayName eq 'Microsoft Graph'\"\n\n#Initialize RequiredResourceAccess for Microsoft Graph Resource API \n$requiredGraphAccess = New-Object Microsoft.Open.AzureAD.Model.RequiredResourceAccess\n$requiredGraphAccess.ResourceAppId = $graphSP.AppId\n$requiredGraphAccess.ResourceAccess = New-Object System.Collections.Generic.List[Microsoft.Open.AzureAD.Model.ResourceAccess]\n\n#Set Application Permissions\n$ApplicationPermissions = @('#{application_permission}')\n\n$reqPermission = $graphSP.AppRoles | Where-Object {$_.Value -eq $ApplicationPermissions}\nif($reqPermission)\n{\n$resourceAccess = New-Object Microsoft.Open.AzureAD.Model.ResourceAccess\n$resourceAccess.Type = \"Role\"\n$resourceAccess.Id = $reqPermission.Id    \n#Add required app permission\n$requiredGraphAccess.ResourceAccess.Add($resourceAccess)\n}\nelse\n{\nWrite-Host \"App permission $permission not found in the Graph Resource API\" -ForegroundColor Red\n}\n\n#Add required resource accesses\n$requiredResourcesAccess = New-Object System.Collections.Generic.List[Microsoft.Open.AzureAD.Model.RequiredResourceAccess]\n$requiredResourcesAccess.Add($requiredGraphAccess)\n\n#Set permissions in existing Azure AD App\nSet-AzureADApplication -ObjectId $aadApplication.ObjectId -RequiredResourceAccess $requiredResourcesAccess\n\n$servicePrincipal = Get-AzureADServicePrincipal -Filter \"AppId eq '$($aadApplication.AppId)'\"\n\nNew-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipal.ObjectId -PrincipalId $servicePrincipal.ObjectId -ResourceId $graphSP.ObjectId -Id $reqPermission.Id"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure AD username",
+          "type": "string",
+          "default": "jonh@contoso.com"
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure AD password",
+          "type": "string",
+          "default": "p4sswd"
+        },
+        {
+          "arg_name": "application_name",
+          "description": "Name of the targeted application that will be created",
+          "type": "string",
+          "default": "test_app"
+        },
+        {
+          "arg_name": "application_permission",
+          "description": "Permission from Microsoft Graph Resource API that will be added to application",
+          "type": "string",
+          "default": "DirectoryRecommendations.Read.All"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "AzureAD module must be installed.",
+          "prereq_command": "try {if (Get-InstalledModule -Name AzureAD -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AzureAD -Force"
+        }
+      ],
+      "auto_generated_guid": "94ea9cc3-81f9-4111-8dde-3fb54f36af4b"
+    },
+    {
+      "name": "Password Change on Directory Service Restore Mode (DSRM) Account",
+      "description": "Change the password on the Directory Service Restore Mode (DSRM) account using ntdsutil by syncing to existing account",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "procedure": "ntdsutil \"set dsrm password\" \"sync from domain account #{sync_account}\" \"q\" \"q\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "sync_account",
+          "description": "Account to sync password from",
+          "type": "string",
+          "default": "%username%"
+        }
+      ],
+      "auto_generated_guid": "d5b886d9-d1c7-4b6e-a7b0-460041bf2823"
+    },
+    {
+      "name": "Domain Password Policy Check: Short Password",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password.  You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default value is 7 characters)",
+          "type": "string",
+          "default": "Uplow-1"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "fc5f9414-bd67-4f5f-a08e-e5381e29cbd1"
+    },
+    {
+      "name": "Domain Password Policy Check: No Number in Password",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password. You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default is long and has upper and lower case and special character but no number)",
+          "type": "string",
+          "default": "UpperLowerLong-special"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "68190529-069b-4ffc-a942-919704158065"
+    },
+    {
+      "name": "Domain Password Policy Check: No Special Character in Password",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password. You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default is long and has upper and lower case and number but no special character)",
+          "type": "string",
+          "default": "UpperLowerLong333noSpecialChar"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "7d984ef2-2db2-4cec-b090-e637e1698f61"
+    },
+    {
+      "name": "Domain Password Policy Check: No Uppercase Character in Password",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password. You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default is long and has and lower case and special character and number but no uppercase)",
+          "type": "string",
+          "default": "lower-long-special-333"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "b299c120-44a7-4d68-b8e2-8ba5a28511ec"
+    },
+    {
+      "name": "Domain Password Policy Check: No Lowercase Character in Password",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password. You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default is long and has and upper case and special character and number but no lowercase)",
+          "type": "string",
+          "default": "UPPER-LONG-SPECIAL-333"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "945da11e-977e-4dab-85d2-f394d03c5887"
+    },
+    {
+      "name": "Domain Password Policy Check: Only Two Character Classes",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password. You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default has only upper and lower case characters)",
+          "type": "string",
+          "default": "onlyUPandLowChars"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "784d1349-5a26-4d20-af5e-d6af53bae460"
+    },
+    {
+      "name": "Domain Password Policy Check: Common Password Use",
+      "description": "Attempt to change the password of the current domain user in order to check password policy. Ideally, you would only run this atomic test to verify that your password policy is blocking the use of the new password.\nIf the password is succesfully changed to the new password, the credential file will be updated to reflect the new password. You can then run the atomic manually and specify a new password of your choosing, however the\npassword policy will likely prevent you from setting the password back to what it was.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "$credFile = \"#{cred_file}\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"#{new_password}\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString #{new_password} -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to #{new_password}\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"#{new_password}\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "new_password",
+          "description": "The password to set for the current domain user (default is Season and current year combo)",
+          "type": "string",
+          "default": "Spring$((Get-Date).Year)!"
+        },
+        {
+          "arg_name": "cred_file",
+          "description": "A file containing the password of the current user",
+          "type": "path",
+          "default": "$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Password for current user must be stored in a credential file",
+          "prereq_command": "if (Test-Path #{cred_file}) {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{cred_file}\") -ErrorAction Ignore | Out-Null\n$cred = Get-Credential -UserName  $env:USERNAME -message \"Enter password for $env:USERNAME to use during password change attempt\"\n$cred.Password | ConvertFrom-SecureString | Out-File \"#{cred_file}\""
+        }
+      ],
+      "auto_generated_guid": "81959d03-c51f-49a1-bb24-23f1ec885578"
+    },
+    {
+      "name": "GCP - Delete Service Account Key",
+      "description": "This Atomic will: \n  - Create a service account\n  - Create a service account key, \n  - Store the result of retrieving a single key for that service account as a variable\n  - Pass that variable for deletion\n  - Delete the service account\n\nThe idea for this Atomic came from a Rule published by the Elastic team.\n\nIdentifies the deletion of an Identity and Access Management (IAM) service account key in Google Cloud Platform (GCP).\nEach service account is associated with two sets of public/private RSA key pairs that are used to authenticate. \nIf a key is deleted, the application will no longer be able to access Google Cloud resources using that key. A security best practice is to rotate your service account keys regularly.\n\nReference: https://github.com/elastic/detection-rules/blob/main/rules/integrations/gcp/impact_gcp_storage_bucket_deleted.toml",
+      "supported_platforms": [
+        "iaas:gcp"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "cd \"$PathToAtomicsFolder/T1098/src/T1098-17/\"\nterraform state rm google_service_account_key.key\nterraform destroy -auto-approve",
+        "procedure": "gcloud config set project #{project_id}\nKEY=`gcloud iam service-accounts keys list --iam-account=#{service_name}@#{project_id}.iam.gserviceaccount.com --format=\"value(KEY_ID)\" --limit=1`\ngcloud iam service-accounts keys delete $KEY --iam-account=#{service_name}@#{project_id}.iam.gserviceaccount.com --quiet"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "project_id",
+          "description": "ID of the GCP Project you to execute the command against.",
+          "type": "string",
+          "default": "atomic-test-1"
+        },
+        {
+          "arg_name": "service_name",
+          "description": "The name of the service account.",
+          "type": "string",
+          "default": "atomic-service-account"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Requires gcloud",
+          "prereq_command": "if [ -x \"$(command -v gcloud)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"Please Install Google Cloud SDK before running this atomic test : https://cloud.google.com/sdk/docs/install\""
+        },
+        {
+          "description": "Check if user is logged in",
+          "prereq_command": "gcloud config get-value account",
+          "get_prereq_command": "gcloud auth login --no-launch-browser"
+        },
+        {
+          "description": "Check if terraform is installed.",
+          "prereq_command": "terraform version",
+          "get_prereq_command": "echo Please install the terraform."
+        },
+        {
+          "description": "Create dependency resources using terraform",
+          "prereq_command": "stat \"$PathToAtomicsFolder/T1098/src/T1098-17/terraform.tfstate\"",
+          "get_prereq_command": "cd \"$PathToAtomicsFolder/T1098/src/T1098-17/\"\nterraform init\nterraform apply -auto-approve"
+        }
+      ],
+      "auto_generated_guid": "7ece1dea-49f1-4d62-bdcc-5801e3292510"
+    }
+  ]
+}

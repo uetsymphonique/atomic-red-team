@@ -1,0 +1,80 @@
+{
+  "attack_technique": "T1021.006",
+  "display_name": "Remote Services: Windows Remote Management",
+  "atomic_tests": [
+    {
+      "name": "Enable Windows Remote Management",
+      "description": "Powershell Enable WinRM\n\nUpon successful execution, powershell will \"Enable-PSRemoting\" allowing for remote PS access.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "Enable-PSRemoting -Force"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "9059e8de-3d7d-4954-a322-46161880b9cf"
+    },
+    {
+      "name": "Remote Code Execution with PS Credentials Using Invoke-Command",
+      "description": "Simulate lateral movement with PowerShell Remoting on the local host. \nUpon successful execution, PowerShell will execute `whoami` using `Invoke-Command`, targeting the \nlocal machine as remote target.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Disable-PSRemoting -Force",
+        "procedure": "Enable-PSRemoting -Force\nInvoke-Command -ComputerName $env:COMPUTERNAME -ScriptBlock {whoami}"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "5295bd61-bd7e-4744-9d52-85962a4cf2d6"
+    },
+    {
+      "name": "WinRM Access with Evil-WinRM",
+      "description": "An adversary may attempt to use Evil-WinRM with a valid account to interact with remote systems that have WinRM enabled",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "evil-winrm -i #{destination_address} -u #{user_name} -p #{password}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "user_name",
+          "description": "Username",
+          "type": "string",
+          "default": "Domain\\Administrator"
+        },
+        {
+          "arg_name": "destination_address",
+          "description": "Remote Host IP or Hostname",
+          "type": "string",
+          "default": "Target"
+        },
+        {
+          "arg_name": "password",
+          "description": "Password",
+          "type": "string",
+          "default": "P@ssw0rd1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Computer must have Ruby Installed",
+          "prereq_command": "try {if (ruby -v) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest  -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubyinstaller-2.7.1-1-x64.exe\" https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-2.7.1-1/rubyinstaller-2.7.1-1-x64.exe\n$file1= \"PathToAtomicsFolder\\..\\ExternalPayloads\\rubyinstaller-2.7.1-1-x64.exe\"\nStart-Process $file1 /S;"
+        },
+        {
+          "description": "Computer must have Evil-WinRM installed",
+          "prereq_command": "try {if (evil-winrm -h) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "gem install evil-winrm"
+        }
+      ],
+      "auto_generated_guid": "efe86d95-44c4-4509-ae42-7bfd9d1f5b3d"
+    }
+  ]
+}

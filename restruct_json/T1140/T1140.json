@@ -1,0 +1,366 @@
+{
+  "attack_technique": "T1140",
+  "display_name": "Deobfuscate/Decode Files or Information",
+  "atomic_tests": [
+    {
+      "name": "Deobfuscate/Decode Files Or Information",
+      "description": "Encode/Decode executable\nUpon execution a file named T1140_calc_decoded.exe will be placed in the temp folder",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del %temp%\\T1140_calc.txt >nul 2>&1\ndel %temp%\\T1140_calc_decoded.exe >nul 2>&1",
+        "procedure": "certutil -encode #{executable} %temp%\\T1140_calc.txt\ncertutil -decode %temp%\\T1140_calc.txt %temp%\\T1140_calc_decoded.exe"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "executable",
+          "description": "name of executable",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\calc.exe"
+        }
+      ],
+      "auto_generated_guid": "dc6fe391-69e6-4506-bd06-ea5eeb4082f8"
+    },
+    {
+      "name": "Certutil Rename and Decode",
+      "description": "Rename certutil and decode a file. This is in reference to latest research by FireEye [here](https://www.fireeye.com/blog/threat-research/2018/09/apt10-targeting-japanese-corporations-using-updated-ttps.html)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del %temp%\\tcm.tmp >nul 2>&1\ndel %temp%\\T1140_calc2.txt >nul 2>&1\ndel %temp%\\T1140_calc2_decoded.exe >nul 2>&1",
+        "procedure": "copy %windir%\\system32\\certutil.exe %temp%\\tcm.tmp\n%temp%\\tcm.tmp -encode #{executable} %temp%\\T1140_calc2.txt\n%temp%\\tcm.tmp -decode %temp%\\T1140_calc2.txt %temp%\\T1140_calc2_decoded.exe"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "executable",
+          "description": "name of executable/file to decode",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\calc.exe"
+        }
+      ],
+      "auto_generated_guid": "71abc534-3c05-4d0c-80f7-cbe93cb2aa94"
+    },
+    {
+      "name": "Base64 decoding with Python",
+      "description": "Use Python to decode a base64-encoded text string and echo it to the console",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ENCODED=$(python3 -c 'import base64;enc=base64.b64encode(\"#{message}\".encode());print(enc.decode())')\npython3 -c \"import base64;dec=base64.b64decode(\\\"$ENCODED\\\");print(dec.decode())\"\npython3 -c \"import base64 as d;dec=d.b64decode(\\\"$ENCODED\\\");print(dec.decode())\"\npython3 -c \"from base64 import b64decode;dec=b64decode(\\\"$ENCODED\\\");print(dec.decode())\"\npython3 -c \"from base64 import b64decode as d;dec=d(\\\"$ENCODED\\\");print(dec.decode())\"\necho $ENCODED | python3 -c \"import base64,sys;dec=base64.b64decode(sys.stdin.read());print(dec.decode())\"\necho $ENCODED > #{encoded_file} && python3 -c \"import base64;dec=base64.b64decode(open('#{encoded_file}').read());print(dec.decode())\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "message",
+          "description": "Message to print to the screen",
+          "type": "string",
+          "default": "Hello from Atomic Red Team test T1140!"
+        },
+        {
+          "arg_name": "encoded_file",
+          "description": "File to temporarily save encoded text",
+          "type": "path",
+          "default": "/tmp/T1140.encoded"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Python must be present",
+          "prereq_command": "which python3",
+          "get_prereq_command": "echo \"Please install Python 3\""
+        }
+      ],
+      "auto_generated_guid": "356dc0e8-684f-4428-bb94-9313998ad608"
+    },
+    {
+      "name": "Base64 decoding with Perl",
+      "description": "Use Perl to decode a base64-encoded text string and echo it to the console",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ENCODED=$(perl -e \"use MIME::Base64;print(encode_base64('#{message}'));\")\nperl -le \"use MIME::Base64;print(decode_base64('$ENCODED'));\"\necho $ENCODED | perl -le 'use MIME::Base64;print(decode_base64(<STDIN>));'\necho $ENCODED > #{encoded_file} && perl -le 'use MIME::Base64;open($f,\"<\",\"#{encoded_file}\");print(decode_base64(<$f>));'"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "message",
+          "description": "Message to print to the screen",
+          "type": "string",
+          "default": "Hello from Atomic Red Team test T1140!"
+        },
+        {
+          "arg_name": "encoded_file",
+          "description": "File to temporarily save encoded text",
+          "type": "path",
+          "default": "/tmp/T1140.encoded"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Perl must be present",
+          "prereq_command": "which perl",
+          "get_prereq_command": "echo \"Please install Perl\""
+        }
+      ],
+      "auto_generated_guid": "6604d964-b9f6-4d4b-8ce8-499829a14d0a"
+    },
+    {
+      "name": "Base64 decoding with shell utilities",
+      "description": "Use common shell utilities to decode a base64-encoded text string and echo it to the console",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ENCODED=$(echo '#{message}' | base64)\nprintf $ENCODED | base64 -d\necho $ENCODED | base64 -d\necho $(echo $ENCODED) | base64 -d\necho $ENCODED > #{encoded_file} && base64 -d #{encoded_file}\necho $ENCODED > #{encoded_file} && base64 -d < #{encoded_file}\necho $ENCODED > #{encoded_file} && cat #{encoded_file} | base64 -d\necho $ENCODED > #{encoded_file} && cat < #{encoded_file} | base64 -d\nbash -c \"{echo,\\\"$(echo $ENCODED)\\\"}|{base64,-d}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "message",
+          "description": "Message to print to the screen",
+          "type": "string",
+          "default": "Hello from Atomic Red Team test T1140!"
+        },
+        {
+          "arg_name": "encoded_file",
+          "description": "File to temporarily save encoded text",
+          "type": "path",
+          "default": "/tmp/T1140.encoded"
+        }
+      ],
+      "auto_generated_guid": "b4f6a567-a27a-41e5-b8ef-ac4b4008bb7e"
+    },
+    {
+      "name": "Base64 decoding with shell utilities (freebsd)",
+      "description": "Use common shell utilities to decode a base64-encoded text string and echo it to the console",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ENCODED=$(echo '#{message}' | b64encode -r -)\nprintf $ENCODED | b64decode -r\necho $ENCODED | b64decode -r\necho $(echo $ENCODED) | b64decode -r\necho $ENCODED > #{encoded_file} && b64encode -r #{encoded_file}\necho $ENCODED > #{encoded_file} && b64decode -r < #{encoded_file}\necho $ENCODED > #{encoded_file} && cat #{encoded_file} | b64decode -r\necho $ENCODED > #{encoded_file} && cat < #{encoded_file} | b64decode -r"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "message",
+          "description": "Message to print to the screen",
+          "type": "string",
+          "default": "Hello from Atomic Red Team test T1140!"
+        },
+        {
+          "arg_name": "encoded_file",
+          "description": "File to temporarily save encoded text",
+          "type": "path",
+          "default": "/tmp/T1140.encoded"
+        }
+      ],
+      "auto_generated_guid": "b6097712-c42e-4174-b8f2-4b1e1a5bbb3d"
+    },
+    {
+      "name": "FreeBSD b64encode Shebang in CLI",
+      "description": "Using b64decode shell scripts that have Shebang in them. This is commonly how attackers obfuscate passing and executing a shell script. Seen [here](https://www.trendmicro.com/pl_pl/research/20/i/the-evolution-of-malicious-shell-scripts.html) by TrendMicro, as well as [LinPEAS](https://github.com/carlospolop/PEASS-ng/tree/master/linPEAS). Also a there is a great Sigma rule [here](https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_base64_shebang_cli.yml) for it.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "echo #{bash_encoded} | b64decode -r | sh\necho #{dash_encoded} | b64decode -r | sh\necho #{fish_encoded} | b64decode -r | sh\necho #{sh_encoded} | b64decode -r | sh"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "bash_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL2Jhc2gKZWNobyAiaHR0cHM6Ly93d3cueW91dHViZS5jb20vQGF0b21pY3NvbmFmcmlkYXkgRlRXIgo="
+        },
+        {
+          "arg_name": "dash_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL2Rhc2gKZWNobyAiaHR0cHM6Ly93d3cueW91dHViZS5jb20vQGF0b21pY3NvbmFmcmlkYXkgRlRXIgo="
+        },
+        {
+          "arg_name": "fish_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL2Rhc2gKZWNobyAiaHR0cHM6Ly93d3cueW91dHViZS5jb20vQGF0b21pY3NvbmFmcmlkYXkgRlRXIgo="
+        },
+        {
+          "arg_name": "sh_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL3NoCmVjaG8gImh0dHBzOi8vd3d3LnlvdXR1YmUuY29tL0BhdG9taWNzb25hZnJpZGF5IEZUVyIK"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "b64decode must be present",
+          "prereq_command": "which b64decode",
+          "get_prereq_command": "echo \"please install b64decode\""
+        }
+      ],
+      "auto_generated_guid": "18ee2002-66e8-4518-87c5-c0ec9c8299ac"
+    },
+    {
+      "name": "Hex decoding with shell utilities",
+      "description": "Use common shell utilities to decode a hex-encoded text string and echo it to the console",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "ENCODED=$(echo '#{message}' | xxd -ps -c 256)\nprintf $ENCODED | xxd -r -p\necho $ENCODED | xxd -r -p\necho $(echo $ENCODED) | xxd -r -p\necho $ENCODED > #{encoded_file} && xxd -r -p #{encoded_file}\necho $ENCODED > #{encoded_file} && xxd -r -p < #{encoded_file}\necho $ENCODED > #{encoded_file} && cat #{encoded_file} | xxd -r -p\necho $ENCODED > #{encoded_file} && cat < #{encoded_file} | xxd -r -p"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "message",
+          "description": "Message to print to the screen",
+          "type": "string",
+          "default": "Hello from Atomic Red Team test T1140!"
+        },
+        {
+          "arg_name": "encoded_file",
+          "description": "File to temporarily save encoded text",
+          "type": "path",
+          "default": "/tmp/T1140.encoded"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "xxd must be present",
+          "prereq_command": "which xxd",
+          "get_prereq_command": "echo \"Please install xxd\""
+        }
+      ],
+      "auto_generated_guid": "005943f9-8dd5-4349-8b46-0313c0a9f973"
+    },
+    {
+      "name": "Linux Base64 Encoded Shebang in CLI",
+      "description": "Using Linux Base64 Encoded shell scripts that have Shebang in them. This is commonly how attackers obfuscate passing and executing a shell script. Seen [here](https://www.trendmicro.com/pl_pl/research/20/i/the-evolution-of-malicious-shell-scripts.html) by TrendMicro, as well as [LinPEAS](https://github.com/carlospolop/PEASS-ng/tree/master/linPEAS). Also a there is a great Sigma rule [here](https://github.com/SigmaHQ/sigma/blob/master/rules/linux/process_creation/proc_creation_lnx_base64_shebang_cli.yml) for it.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "echo #{bash_encoded} | base64 -d | bash\necho #{dash_encoded} | base64 -d | bash\necho #{fish_encoded} | base64 -d | bash\necho #{sh_encoded} | base64 -d | bash"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "bash_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL2Jhc2gKZWNobyAiaHR0cHM6Ly93d3cueW91dHViZS5jb20vQGF0b21pY3NvbmFmcmlkYXkgRlRXIgo="
+        },
+        {
+          "arg_name": "dash_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL2Rhc2gKZWNobyAiaHR0cHM6Ly93d3cueW91dHViZS5jb20vQGF0b21pY3NvbmFmcmlkYXkgRlRXIgo="
+        },
+        {
+          "arg_name": "fish_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL2Rhc2gKZWNobyAiaHR0cHM6Ly93d3cueW91dHViZS5jb20vQGF0b21pY3NvbmFmcmlkYXkgRlRXIgo="
+        },
+        {
+          "arg_name": "sh_encoded",
+          "description": "Encoded",
+          "type": "string",
+          "default": "IyEvYmluL3NoCmVjaG8gImh0dHBzOi8vd3d3LnlvdXR1YmUuY29tL0BhdG9taWNzb25hZnJpZGF5IEZUVyIK"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "base64 must be present",
+          "prereq_command": "which base64",
+          "get_prereq_command": "echo \"please install base64\""
+        }
+      ],
+      "auto_generated_guid": "3a15c372-67c1-4430-ac8e-ec06d641ce4d"
+    },
+    {
+      "name": "XOR decoding and command execution using Python",
+      "description": "An adversary can obfuscate malicious commands or payloads using XOR and execute them on the victim's machine. This test uses Python to decode and execute commands on the machine.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "procedure": "python3 -c 'import base64; import subprocess; xor_decrypt = lambda text, key: \"\".join([chr(c ^ ord(k)) for c, k in zip(base64.b64decode(text.encode()), key)]); command = \"#{encrypted_command}\"; key = \"#{xor_key}\"; exec = xor_decrypt(command, key); subprocess.call(exec, shell=True)'"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "xor_key",
+          "description": "Key used to decrypt the command",
+          "type": "string",
+          "default": "waEHleblxiQjoxFJQaIMLdHKz"
+        },
+        {
+          "arg_name": "encrypted_command",
+          "description": "Encrypted command that will be executed",
+          "type": "string",
+          "default": "AAkqKQEM"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Python3 must be installed",
+          "prereq_command": "which python3",
+          "get_prereq_command": "echo \"Install Python3\""
+        }
+      ],
+      "auto_generated_guid": "c3b65cd5-ee51-4e98-b6a3-6cbdec138efc"
+    },
+    {
+      "name": "Expand CAB with expand.exe",
+      "description": "Uses expand.exe to extract a file from a CAB created locally. This simulates adversarial use of expand on cabinet archives.\nUpon success, art-expand-source.txt is extracted next to the CAB.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del \"PathToAtomicsFolder\\T1140\\src\\art-expand-source.txt\" >nul 2>&1\ndel \"#{cab_path}\" >nul 2>&1\nrmdir \"#{output_dir}\" /s /q >nul 2>&1",
+        "procedure": "mkdir \"#{output_dir}\" >nul 2>&1\necho hello from atomic red team > \"PathToAtomicsFolder\\T1140\\src\\art-expand-source.txt\"\nmakecab \"PathToAtomicsFolder\\T1140\\src\\art-expand-source.txt\" \"#{cab_path}\"\npushd \"#{output_dir}\"\nexpand \"#{cab_path}\" -F:* .\npopd"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "cab_path",
+          "description": "Path to the CAB to expand (created if missing)",
+          "type": "path",
+          "default": "%TEMP%\\art-expand-test.cab"
+        },
+        {
+          "arg_name": "output_dir",
+          "description": "Destination directory",
+          "type": "path",
+          "default": "%TEMP%\\art-expand-out"
+        }
+      ],
+      "auto_generated_guid": "9f8b1c54-cb76-4d5e-bb1f-2f5c0e8f5a11"
+    }
+  ]
+}

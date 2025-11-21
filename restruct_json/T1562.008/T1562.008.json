@@ -1,0 +1,434 @@
+{
+  "attack_technique": "T1562.008",
+  "display_name": "Impair Defenses: Disable Cloud Logs",
+  "atomic_tests": [
+    {
+      "name": "AWS - CloudTrail Changes",
+      "description": "Creates a new cloudTrail in AWS, Upon successful creation it will Update,Stop and Delete the cloudTrail",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "cd \"$PathToAtomicsFolder/T1562.008/src/T1562.008-1/\"\nterraform destroy -auto-approve",
+        "procedure": "aws cloudtrail update-trail --name #{cloudtrail_name} --s3-bucket-name #{s3_bucket_name}  --is-multi-region-trail --region #{region}\naws cloudtrail stop-logging --name #{cloudtrail_name} --region #{region}\naws cloudtrail delete-trail --name #{cloudtrail_name} --region #{region}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "cloudtrail_name",
+          "description": "Name of the cloudTrail",
+          "type": "string",
+          "default": "redatomictesttrail"
+        },
+        {
+          "arg_name": "s3_bucket_name",
+          "description": "Name of the bucket",
+          "type": "string",
+          "default": "redatomic-test"
+        },
+        {
+          "arg_name": "region",
+          "description": "Name of the region",
+          "type": "string",
+          "default": "us-east-1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS default profile using: aws configure"
+        },
+        {
+          "description": "Check if terraform is installed.",
+          "prereq_command": "terraform version",
+          "get_prereq_command": "echo Please install the terraform and configure your aws default profile"
+        },
+        {
+          "description": "Check if the dependency resources are already present.",
+          "prereq_command": "if [ -f \"$PathToAtomicsFolder/T1562.008/src/T1562.008-1/terraform.tfstate\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "cd \"$PathToAtomicsFolder/T1562.008/src/T1562.008-1/\"\nterraform init\nterraform apply -auto-approve"
+        }
+      ],
+      "auto_generated_guid": "9c10dc6b-20bd-403a-8e67-50ef7d07ed4e"
+    },
+    {
+      "name": "Azure - Eventhub Deletion",
+      "description": "Identifies an Event Hub deletion in Azure.\nAn Event Hub is an event processing service that ingests and processes large volumes of events and data.\nAn adversary may delete an Event Hub in an attempt to evade detection.\nhttps://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-about.",
+      "supported_platforms": [
+        "iaas:azure"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "cd \"$PathToAtomicsFolder/T1562.008/src/T1562.008-2/\"\nterraform destroy -auto-approve",
+        "procedure": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-AzureAD -Credential $creds\nRemove-AzEventHub -ResourceGroupName #{resource_group} -Namespace #{name_space_name} -Name #{event_hub_name}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "Azure username",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "password",
+          "description": "Azure password",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "event_hub_name",
+          "description": "Name of the eventhub",
+          "type": "string",
+          "default": "test_eventhub"
+        },
+        {
+          "arg_name": "resource_group",
+          "description": "Name of the resource group",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "name_space_name",
+          "description": "Name of the NameSpace",
+          "type": "string",
+          "default": null
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Install-Module -Name Az",
+          "prereq_command": "try {if (Get-InstalledModule -Name AzureAD -ErrorAction SilentlyContinue) {exit 0} else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "Install-Module -Name AzureAD -Force"
+        },
+        {
+          "description": "Check if terraform is installed.",
+          "prereq_command": "terraform version",
+          "get_prereq_command": "echo Please install the terraform."
+        },
+        {
+          "description": "Check if the user is logged into Azure.",
+          "prereq_command": "az account show",
+          "get_prereq_command": "echo Configure your Azure account using: az login."
+        },
+        {
+          "description": "Create dependency resources using terraform",
+          "prereq_command": "try {if (Test-Path \"$PathToAtomicsFolder/T1562.008/src/T1562.008-2/terraform.tfstate\" ){ exit 0 } else {exit 1}} catch {exit 1}",
+          "get_prereq_command": "cd \"$PathToAtomicsFolder/T1562.008/src/T1562.008-2/\"\nterraform init\nterraform apply -auto-approve"
+        }
+      ],
+      "auto_generated_guid": "5e09bed0-7d33-453b-9bf3-caea32bff719"
+    },
+    {
+      "name": "Office 365 - Exchange Audit Log Disabled",
+      "description": "You can use the Exchange Management Shell to enable or disable mailbox audit logging for a mailbox.\nUnified or Admin Audit logs are disabled via the Exchange Powershell cmdline.\nhttps://github.com/Azure/Azure-Sentinel/blob/master/Detections/OfficeActivity/exchange_auditlogdisabled.yaml",
+      "supported_platforms": [
+        "office-365"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-ExchangeOnline -Credential $creds\nSet-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $True",
+        "procedure": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-ExchangeOnline -Credential $creds\nSet-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $False"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "office-365 username",
+          "type": "string",
+          "default": null
+        },
+        {
+          "arg_name": "password",
+          "description": "office-365 password",
+          "type": "string",
+          "default": null
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "ExchangeOnlineManagement PowerShell module must be installed",
+          "prereq_command": "$RequiredModule = Get-Module -Name ExchangeOnlineManagement -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Connect-ExchangeOnline']) {exit 1} else {exit 0}",
+          "get_prereq_command": "Install-Module -Name ExchangeOnlineManagement         \nImport-Module ExchangeOnlineManagement"
+        }
+      ],
+      "auto_generated_guid": "1ee572f3-056c-4632-a7fc-7e7c42b1543c"
+    },
+    {
+      "name": "AWS - Disable CloudTrail Logging Through Event Selectors using Stratus",
+      "description": "Update event selectors in AWS CloudTrail to disable the logging of certain management events to evade defense. This Atomic test leverages a tool called Stratus-Red-Team built by DataDog (https://github.com/DataDog/stratus-red-team). Stratus Red Team is a self-contained binary. You can use it to easily detonate offensive attack techniques against a live cloud environment. Ref: https://stratus-red-team.cloud/attack-techniques/AWS/aws.defense-evasion.cloudtrail-event-selectors/",
+      "supported_platforms": [
+        "linux",
+        "macos",
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "export AWS_REGION=#{aws_region}\necho \"Cleanup detonation\"\ncd #{stratus_path}\n./stratus cleanup --all\nrm -rf stratus*",
+        "procedure": "export AWS_REGION=#{aws_region} \ncd #{stratus_path}\necho \"starting warmup\"\n./stratus warmup aws.defense-evasion.cloudtrail-event-selectors\necho \"starting detonate\"\n./stratus detonate aws.defense-evasion.cloudtrail-event-selectors --force"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "stratus_path",
+          "description": "Path of stratus binary",
+          "type": "path",
+          "default": "$PathToAtomicsFolder/T1562.008/src"
+        },
+        {
+          "arg_name": "aws_region",
+          "description": "AWS region to detonate",
+          "type": "string",
+          "default": "us-west-2"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Stratus binary must be present at the (#{stratus_path}/stratus)",
+          "prereq_command": "if [ -f #{stratus_path}/stratus ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "if [ \"$(uname)\" == \"Darwin\" ]\nthen DOWNLOAD_URL=$(curl -s https://api.github.com/repos/DataDog/stratus-red-team/releases/latest | grep browser_download_url | grep Darwin_x86_64 | cut -d '\"' -f 4); wget -q -O #{stratus_path}/stratus-red-team-latest.tar.gz $DOWNLOAD_URL\n  tar -xzvf #{stratus_path}/stratus-red-team-latest.tar.gz --directory #{stratus_path}/\nelif [ \"$(expr substr $(uname) 1 5)\" == \"Linux\" ]\nthen DOWNLOAD_URL=$(curl -s https://api.github.com/repos/DataDog/stratus-red-team/releases/latest | grep browser_download_url | grep linux_x86_64 | cut -d '\"' -f 4) \n  wget -q -O #{stratus_path}/stratus-red-team-latest.tar.gz $DOWNLOAD_URL\n  tar -xzvf #{stratus_path}/stratus-red-team-latest.tar.gz --directory #{stratus_path}/\nfi"
+        },
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS defult profile using: aws configure"
+        }
+      ],
+      "auto_generated_guid": "a27418de-bdce-4ebd-b655-38f11142bf0c"
+    },
+    {
+      "name": "AWS - CloudTrail Logs Impairment Through S3 Lifecycle Rule using Stratus",
+      "description": "This Atomic test will use the Stratus Red Team will first setup a CloudTrail logging into an S3 bucket and will then make an API call to update the lifecycle rule on that S3 bucket with an expiration date of 1 day. This will essentially delete all the logs after one day. Adversaries often do this actiivity to evade detection. Stratus Red Team is a self-contained binary. You can use it to easily detonate offensive attack techniques against a live cloud environment. ref: https://stratus-red-team.cloud/attack-techniques/AWS/aws.defense-evasion.cloudtrail-lifecycle-rule/",
+      "supported_platforms": [
+        "linux",
+        "macos",
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "export AWS_REGION=#{aws_region}\necho \"Cleanup detonation\"\ncd #{stratus_path}\n./stratus cleanup --all\nrm -rf stratus*",
+        "procedure": "export AWS_REGION=#{aws_region} \ncd #{stratus_path}\necho \"starting warmup\"\n./stratus warmup aws.defense-evasion.cloudtrail-lifecycle-rule\necho \"starting detonate\"\n./stratus detonate aws.defense-evasion.cloudtrail-lifecycle-rule --force"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "stratus_path",
+          "description": "Path of stratus binary",
+          "type": "path",
+          "default": "$PathToAtomicsFolder/T1562.008/src"
+        },
+        {
+          "arg_name": "aws_region",
+          "description": "AWS region to detonate",
+          "type": "string",
+          "default": "us-west-2"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Stratus binary must be present at the (#{stratus_path}/stratus)",
+          "prereq_command": "if [ -f #{stratus_path}/stratus ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "if [ \"$(uname)\" == \"Darwin\" ]\nthen DOWNLOAD_URL=$(curl -s https://api.github.com/repos/DataDog/stratus-red-team/releases/latest | grep browser_download_url | grep Darwin_x86_64 | cut -d '\"' -f 4); wget -q -O #{stratus_path}/stratus-red-team-latest.tar.gz $DOWNLOAD_URL\n  tar -xzvf #{stratus_path}/stratus-red-team-latest.tar.gz --directory #{stratus_path}/\nelif [ \"$(expr substr $(uname) 1 5)\" == \"Linux\" ]\nthen DOWNLOAD_URL=$(curl -s https://api.github.com/repos/DataDog/stratus-red-team/releases/latest | grep browser_download_url | grep linux_x86_64 | cut -d '\"' -f 4) \n  wget -q -O #{stratus_path}/stratus-red-team-latest.tar.gz $DOWNLOAD_URL\n  tar -xzvf #{stratus_path}/stratus-red-team-latest.tar.gz --directory #{stratus_path}/\nfi"
+        },
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS defult profile using: aws configure"
+        }
+      ],
+      "auto_generated_guid": "22d89a2f-d475-4895-b2d4-68626d49c029"
+    },
+    {
+      "name": "AWS - Remove VPC Flow Logs using Stratus",
+      "description": "This Atomic will attempt to remove AWS VPC Flow Logs configuration. Stratus Red Team is a self-contained binary. You can use it to easily detonate offensive attack techniques against a live cloud environment. Ref: https://stratus-red-team.cloud/attack-techniques/AWS/aws.defense-evasion.vpc-remove-flow-logs/",
+      "supported_platforms": [
+        "linux",
+        "macos",
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "export AWS_REGION=#{aws_region}\necho \"Cleanup detonation\"\ncd #{stratus_path}\n./stratus cleanup --all\nrm -rf stratus*",
+        "procedure": "export AWS_REGION=#{aws_region} \ncd #{stratus_path}\necho \"starting warmup\"\n./stratus warmup aws.defense-evasion.vpc-remove-flow-logs\necho \"starting detonate\"\n./stratus detonate aws.defense-evasion.vpc-remove-flow-logs --force"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "stratus_path",
+          "description": "Path of stratus binary",
+          "type": "path",
+          "default": "$PathToAtomicsFolder/T1562.008/src"
+        },
+        {
+          "arg_name": "aws_region",
+          "description": "AWS region to detonate",
+          "type": "string",
+          "default": "us-west-2"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Stratus binary must be present at the (#{stratus_path}/stratus)",
+          "prereq_command": "if [ -f #{stratus_path}/stratus ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "if [ \"$(uname)\" == \"Darwin\" ]\nthen DOWNLOAD_URL=$(curl -s https://api.github.com/repos/DataDog/stratus-red-team/releases/latest | grep browser_download_url | grep Darwin_x86_64 | cut -d '\"' -f 4); wget -q -O #{stratus_path}/stratus-red-team-latest.tar.gz $DOWNLOAD_URL\n  tar -xzvf #{stratus_path}/stratus-red-team-latest.tar.gz --directory #{stratus_path}/\nelif [ \"$(expr substr $(uname) 1 5)\" == \"Linux\" ]\nthen DOWNLOAD_URL=$(curl -s https://api.github.com/repos/DataDog/stratus-red-team/releases/latest | grep browser_download_url | grep linux_x86_64 | cut -d '\"' -f 4) \n  wget -q -O #{stratus_path}/stratus-red-team-latest.tar.gz $DOWNLOAD_URL\n  tar -xzvf #{stratus_path}/stratus-red-team-latest.tar.gz --directory #{stratus_path}/\nfi"
+        },
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS defult profile using: aws configure"
+        }
+      ],
+      "auto_generated_guid": "93c150f5-ad7b-4ee3-8992-df06dec2ac79"
+    },
+    {
+      "name": "AWS - CloudWatch Log Group Deletes",
+      "description": "Creates a new cloudWatch log group in AWS, Upon successful creation it will Delete the group. Attackers can use this technique to evade defenses by \ndeleting the log stream. Once it is deleted, the logs created by the attackers will not be logged. https://www.elastic.co/guide/en/security/current/aws-cloudwatch-log-group-deletion.html#aws-cloudwatch-log-group-deletion",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "aws logs create-log-group --log-group-name #{cloudwatch_log_group_name} --region #{region} --output json\necho \"*** Log Group Created ***\"\naws logs delete-log-group --log-group-name #{cloudwatch_log_group_name} --region #{region} --output json\necho \"*** Log Group Deleted ***\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "cloudwatch_log_group_name",
+          "description": "Name of the cloudWatch log group",
+          "type": "string",
+          "default": "log-test"
+        },
+        {
+          "arg_name": "region",
+          "description": "Name of the region",
+          "type": "string",
+          "default": "us-east-1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS defult profile using: aws configure"
+        }
+      ],
+      "auto_generated_guid": "89422c87-b57b-4a04-a8ca-802bb9d06121"
+    },
+    {
+      "name": "AWS CloudWatch Log Stream Deletes",
+      "description": "Creates a new cloudWatch log stream in AWS, Upon successful creation it will Delete the stream. Attackers can use this technique to evade defenses by \ndeleting the log stream. Once it is deleted, the logs created by the attackers will not be logged. https://www.elastic.co/guide/en/security/current/aws-cloudwatch-log-stream-deletion.html",
+      "supported_platforms": [
+        "iaas:aws"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "aws logs create-log-group --log-group-name #{cloudwatch_log_group_name} --region #{region} --output json\necho \"*** Log Group Created ***\"\naws logs create-log-stream --log-group-name #{cloudwatch_log_group_name} --log-stream-name #{cloudwatch_log_stream_name} --region #{region}\necho \"*** Log Stream Created ***\"\naws logs delete-log-stream --log-group-name #{cloudwatch_log_group_name} --log-stream-name #{cloudwatch_log_stream_name} --region #{region}\necho \"*** Log Stream Deleted ***\"\naws logs delete-log-group --log-group-name #{cloudwatch_log_group_name} --region #{region} --output json\necho \"*** Log Group Deleted ***\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "cloudwatch_log_group_name",
+          "description": "Name of the cloudWatch log group",
+          "type": "string",
+          "default": "test-logs"
+        },
+        {
+          "arg_name": "cloudwatch_log_stream_name",
+          "description": "Name of the cloudWatch log stream",
+          "type": "string",
+          "default": "20150601"
+        },
+        {
+          "arg_name": "region",
+          "description": "Name of the region",
+          "type": "string",
+          "default": "us-west-2"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Check if ~/.aws/credentials file has a default stanza is configured",
+          "prereq_command": "cat ~/.aws/credentials | grep \"default\"",
+          "get_prereq_command": "echo Please install the aws-cli and configure your AWS defult profile using: aws configure"
+        }
+      ],
+      "auto_generated_guid": "33ca84bc-4259-4943-bd36-4655dc420932"
+    },
+    {
+      "name": "Office 365 - Set Audit Bypass For a Mailbox",
+      "description": "Use Exchange Management Shell to Mailbox auditing to bypass. It will prevent any mailbox audit logging entries being generated for the target e-mail box.\nhttps://learn.microsoft.com/en-us/powershell/module/exchange/set-mailboxauditbypassassociation?view=exchange-ps",
+      "supported_platforms": [
+        "office-365"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-ExchangeOnline -Credential $creds\nSet-MailboxAuditBypassAssociation -Identity \"#{target_email}\" -AuditBypassEnabled $false\nDisconnect-ExchangeOnline -Confirm:$false",
+        "procedure": "$secure_pwd = \"#{password}\" | ConvertTo-SecureString -AsPlainText -Force\n$creds = New-Object System.Management.Automation.PSCredential -ArgumentList \"#{username}\", $secure_pwd\nConnect-ExchangeOnline -Credential $creds\nSet-MailboxAuditBypassAssociation -Identity \"#{target_email}\" -AuditBypassEnabled $true"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "username",
+          "description": "office-365 username",
+          "type": "string",
+          "default": "o365_user_test"
+        },
+        {
+          "arg_name": "password",
+          "description": "office-365 password",
+          "type": "string",
+          "default": "o365_password_test"
+        },
+        {
+          "arg_name": "target_email",
+          "description": "office-365 target_email",
+          "type": "string",
+          "default": "o365_email_test"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "ExchangeOnlineManagement PowerShell module must be installed",
+          "prereq_command": "$RequiredModule = Get-Module -Name ExchangeOnlineManagement -ListAvailable\nif (-not $RequiredModule) {exit 1}\nif (-not $RequiredModule.ExportedCommands['Connect-ExchangeOnline']) {exit 1} else {exit 0}",
+          "get_prereq_command": "Install-Module -Name ExchangeOnlineManagement         \nImport-Module ExchangeOnlineManagement"
+        }
+      ],
+      "auto_generated_guid": "c9a2f6fe-7197-488c-af6d-10c782121ca6"
+    },
+    {
+      "name": "GCP - Delete Activity Event Log",
+      "description": "GCP provides 4 types of Cloud Audit Logs: Admin Activity, Data Access, System Events, and Policy Denied.\nAn adversary may attempt to delete logs in order to hide their activity. However, Admin Activity, System Events, and Policy Deny events logs cannot be deleted. \n\nThis Atomic attempts to delete the Activity Event log. An event is generated under the method name of `google.logging.v2.LoggingServiceV2.DeleteLog` with a Serverity of `ERROR`.",
+      "supported_platforms": [
+        "iaas:gcp"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "procedure": "gcloud config set project #{project-id}\ngcloud logging logs delete projects/#{project-id}/logs/cloudaudit.googleapis.com%2Factivity --quiet"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "project-id",
+          "description": "ID of the GCP Project you to execute the command against.",
+          "type": "string",
+          "default": "atomic-project-1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Requires gcloud",
+          "prereq_command": "if [ -x \"$(command -v gcloud)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"Please Install Google Cloud SDK before running this atomic test : https://cloud.google.com/sdk/docs/install\""
+        },
+        {
+          "description": "Check if user is logged in",
+          "prereq_command": "gcloud config get-value account",
+          "get_prereq_command": "gcloud auth login --no-launch-browser"
+        }
+      ],
+      "auto_generated_guid": "d56152ec-01d9-42a2-877c-aac1f6ebe8e6"
+    }
+  ]
+}

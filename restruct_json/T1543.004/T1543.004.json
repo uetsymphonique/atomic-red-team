@@ -1,0 +1,41 @@
+{
+  "attack_technique": "T1543.004",
+  "display_name": "Create or Modify System Process: Launch Daemon",
+  "atomic_tests": [
+    {
+      "name": "Launch Daemon",
+      "description": "Utilize LaunchDaemon to launch `Hello World`",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "cleanup_command": "sudo launchctl unload /Library/LaunchDaemons/#{plist_filename}\nsudo rm /Library/LaunchDaemons/#{plist_filename}\nsudo rm /tmp/T1543_004_atomicredteam.txt",
+        "procedure": "sudo cp #{path_malicious_plist} /Library/LaunchDaemons/#{plist_filename}\nsudo launchctl load -w /Library/LaunchDaemons/#{plist_filename}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "plist_filename",
+          "description": "filename",
+          "type": "string",
+          "default": "com.atomicredteam.plist"
+        },
+        {
+          "arg_name": "path_malicious_plist",
+          "description": "Name of file to store in cron folder",
+          "type": "string",
+          "default": "$PathToAtomicsFolder/T1543.004/src/atomicredteam_T1543_004.plist"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "The shared library must exist on disk at specified location (#{path_malicious_plist})",
+          "prereq_command": "if [ -f #{path_malicious_plist} ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"The plist file doesn't exist. Check the path and try again.\"; exit 1;"
+        }
+      ],
+      "auto_generated_guid": "03ab8df5-3a6b-4417-b6bd-bb7a5cfd74cf"
+    }
+  ]
+}

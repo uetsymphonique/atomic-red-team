@@ -1,0 +1,176 @@
+{
+  "attack_technique": "T1057",
+  "display_name": "Process Discovery",
+  "atomic_tests": [
+    {
+      "name": "Process Discovery - ps",
+      "description": "Utilize ps to identify processes.\n\nUpon successful execution, sh will execute ps and output to /tmp/loot.txt.",
+      "supported_platforms": [
+        "linux",
+        "macos"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "rm #{output_file}",
+        "procedure": "ps >> #{output_file}\nps aux >> #{output_file}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "output_file",
+          "description": "path of output file",
+          "type": "path",
+          "default": "/tmp/loot.txt"
+        }
+      ],
+      "auto_generated_guid": "4ff64f0b-aaf2-4866-b39d-38d9791407cc"
+    },
+    {
+      "name": "Process Discovery - tasklist",
+      "description": "Utilize tasklist to identify processes.\n\nUpon successful execution, cmd.exe will execute tasklist.exe to list processes. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "tasklist"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "c5806a4f-62b8-4900-980b-c7ec004e9908"
+    },
+    {
+      "name": "Process Discovery - Get-Process",
+      "description": "Utilize Get-Process PowerShell cmdlet to identify processes.\n\nUpon successful execution, powershell.exe will execute Get-Process to list processes. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Get-Process"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "3b3809b6-a54b-4f5b-8aff-cb51f2e97b34"
+    },
+    {
+      "name": "Process Discovery - get-wmiObject",
+      "description": "Utilize get-wmiObject PowerShell cmdlet to identify processes.\n\nUpon successful execution, powershell.exe will execute get-wmiObject to list processes. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "get-wmiObject -class Win32_Process"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "b51239b4-0129-474f-a2b4-70f855b9f2c2"
+    },
+    {
+      "name": "Process Discovery - wmic process",
+      "description": "Utilize windows management instrumentation to identify processes.\n\nUpon successful execution, WMIC will execute process to list processes. Output will be via stdout.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "wmic process get /format:list"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "640cbf6d-659b-498b-ba53-f6dd1a1cc02c"
+    },
+    {
+      "name": "Discover Specific Process - tasklist",
+      "description": "Adversaries may use command line tools to discover specific processes in preparation of further attacks. \nExamples of this could be discovering the PID of lsass.exe to dump its memory or discovering whether specific security processes (e.g. AV or EDR) are running.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "tasklist | findstr #{process_to_enumerate}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "process_to_enumerate",
+          "description": "Process name string to search for.",
+          "type": "string",
+          "default": "lsass"
+        }
+      ],
+      "auto_generated_guid": "11ba69ee-902e-4a0f-b3b6-418aed7d7ddb"
+    },
+    {
+      "name": "Process Discovery - Process Hacker",
+      "description": "Process Hacker can be exploited to infiltrate system processes, identify weak points, or achieve unauthorized control over systems. However, its malicious use can often be flagged by security defenses, rendering it a perilous tool for illegitimate purposes.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "Start-Process -FilePath \"$Env:ProgramFiles\\Process Hacker 2\\#{processhacker_exe}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "processhacker_exe",
+          "description": "Process hacker installation executables.",
+          "type": "string",
+          "default": "ProcessHacker.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "Process Hacker must be installed in the location",
+          "prereq_command": "if (Test-Path \"c:\\Program Files\\Process Hacker 2\\#{processhacker_exe}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host Downloading Process Hacker\nNew-Item -Type Directory \"C:\\Temp\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://versaweb.dl.sourceforge.net/project/processhacker/processhacker2/processhacker-2.39-setup.exe\" -OutFile \"C:\\Temp\\ExternalPayloads\\processhacker-2.39-setup.exe\"\nWrite-Host Installing Process Hacker\nStart-Process \"c:\\Temp\\ExternalPayloads\\processhacker-2.39-setup.exe\" -Wait -ArgumentList \"/s\""
+        }
+      ],
+      "auto_generated_guid": "966f4c16-1925-4d9b-8ce0-01334ee0867d"
+    },
+    {
+      "name": "Process Discovery - PC Hunter",
+      "description": "PC Hunter is a toolkit with access to hundreds of settings including kernels, kernel modules, processes, network, startup, and more. When abused, this tool can allow threat actors to effectively access sensitive processes, collect system information, and terminate security software.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "procedure": "Start-Process -FilePath \"C:\\Temp\\ExternalPayloads\\PCHunter_free\\#{pchunter64_exe}\""
+      },
+      "input_arguments": [
+        {
+          "arg_name": "pchunter64_exe",
+          "description": "Process hacker installation executables.",
+          "type": "string",
+          "default": "PChunter64.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "PCHunter must be present in device",
+          "prereq_command": "if (Get-ChildItem -Path C:\\ -Include *PCHunter64* -File -Recurse -ErrorAction SilentlyContinue) {exit 0} else {exit 1}",
+          "get_prereq_command": "Write-Host Downloading PC Hunter\nNew-Item -Type Directory \"C:\\Temp\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://www.snapfiles.com/directdl/PCHunter_free.zip\" -OutFile \"C:\\Temp\\ExternalPayloads\\PCHunter_free.zip\"\nExpand-Archive -LiteralPath 'C:\\Temp\\ExternalPayloads\\PCHunter_free.zip' -DestinationPath C:\\Temp\\ExternalPayloads\nWrite-Host Unzipping Installing Process Hunter"
+        }
+      ],
+      "auto_generated_guid": "b4ca838d-d013-4461-bf2c-f7132617b409"
+    },
+    {
+      "name": "Launch Taskmgr from cmd to View running processes",
+      "description": "An adverary may launch taskmgr.exe with the /7 switch via command prompt to view processes running on the system.\n[Reference](https://github.com/trellix-enterprise/ac3-threat-sightings/blob/main/sightings/Sightings_Conti_Ransomware.yml)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "taskmgr.exe /7"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "4fd35378-39aa-481e-b7c4-e3bf49375c67"
+    }
+  ]
+}

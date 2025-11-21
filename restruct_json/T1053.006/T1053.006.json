@@ -1,0 +1,90 @@
+{
+  "attack_technique": "T1053.006",
+  "display_name": "Scheduled Task/Job: Systemd Timers",
+  "atomic_tests": [
+    {
+      "name": "Create Systemd Service and Timer",
+      "description": "This test creates Systemd service and timer then starts and enables the Systemd timer",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "cleanup_command": "systemctl stop #{systemd_timer_name}\nsystemctl disable #{systemd_timer_name}\nrm #{path_to_systemd_service}\nrm #{path_to_systemd_timer}\nsystemctl daemon-reload",
+        "procedure": "echo \"[Unit]\" > #{path_to_systemd_service}\necho \"Description=Atomic Red Team Systemd Timer Service\" >> #{path_to_systemd_service}\necho \"[Service]\" >> #{path_to_systemd_service}\necho \"Type=simple\" >> #{path_to_systemd_service}\necho \"ExecStart=/bin/touch /tmp/art-systemd-timer-marker\" >> #{path_to_systemd_service}\necho \"[Install]\" >> #{path_to_systemd_service}\necho \"WantedBy=multi-user.target\" >> #{path_to_systemd_service}\necho \"[Unit]\" > #{path_to_systemd_timer}\necho \"Description=Executes Atomic Red Team Systemd Timer Service\" >> #{path_to_systemd_timer}\necho \"Requires=#{systemd_service_name}\" >> #{path_to_systemd_timer}\necho \"[Timer]\" >> #{path_to_systemd_timer}\necho \"Unit=#{systemd_service_name}\" >> #{path_to_systemd_timer}\necho \"OnCalendar=*-*-* *:*:00\" >> #{path_to_systemd_timer}\necho \"[Install]\" >> #{path_to_systemd_timer}\necho \"WantedBy=timers.target\" >> #{path_to_systemd_timer}\nsystemctl start #{systemd_timer_name}\nsystemctl enable #{systemd_timer_name}\nsystemctl daemon-reload"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "path_to_systemd_service",
+          "description": "Path to systemd service unit file",
+          "type": "path",
+          "default": "/etc/systemd/system/art-timer.service"
+        },
+        {
+          "arg_name": "path_to_systemd_timer",
+          "description": "Path to service timer file",
+          "type": "path",
+          "default": "/etc/systemd/system/art-timer.timer"
+        },
+        {
+          "arg_name": "systemd_service_name",
+          "description": "Name of systemd service",
+          "type": "string",
+          "default": "art-timer.service"
+        },
+        {
+          "arg_name": "systemd_timer_name",
+          "description": "Name of systemd service timer",
+          "type": "string",
+          "default": "art-timer.timer"
+        }
+      ],
+      "auto_generated_guid": "f4983098-bb13-44fb-9b2c-46149961807b"
+    },
+    {
+      "name": "Create a user level transient systemd service and timer",
+      "description": "Schedule a user level transient task (will not survive a reboot) without having to create the .timer or .service files by using the systemd-run command.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": false,
+        "cleanup_command": "systemctl --user stop Atomic-Red-Team.service\nsystemctl --user stop Atomic-Red-Team.timer\nrm /tmp/log",
+        "procedure": "systemd-run --user --unit=Atomic-Red-Team --on-calendar '*:0/1' /bin/sh -c 'echo \"$(date) $(whoami)\" >>/tmp/log'"
+      },
+      "input_arguments": [],
+      "dependencies": [
+        {
+          "description": "Check if systemd-run exists on the machine",
+          "prereq_command": "if [ -x \"$(command -v systemd-run)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"Install systemd on the machine.\"; exit 1;"
+        }
+      ],
+      "auto_generated_guid": "3de33f5b-62e5-4e63-a2a0-6fd8808c80ec"
+    },
+    {
+      "name": "Create a system level transient systemd service and timer",
+      "description": "Schedule a system level transient task (will not survive a reboot) without having to create the .timer or .service files by using the systemd-run command.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "systemctl stop Atomic-Red-Team.service\nsystemctl stop Atomic-Red-Team.timer\nrm /tmp/log",
+        "procedure": "systemd-run --unit=Atomic-Red-Team --on-calendar '*:0/1' /bin/sh -c 'echo \"$(date) $(whoami)\" >>/tmp/log'"
+      },
+      "input_arguments": [],
+      "dependencies": [
+        {
+          "description": "Check if systemd-run exists on the machine",
+          "prereq_command": "if [ -x \"$(command -v systemd-run)\" ]; then exit 0; else exit 1; fi;",
+          "get_prereq_command": "echo \"Install systemd on the machine.\"; exit 1;"
+        }
+      ],
+      "auto_generated_guid": "d3eda496-1fc0-49e9-aff5-3bec5da9fa22"
+    }
+  ]
+}

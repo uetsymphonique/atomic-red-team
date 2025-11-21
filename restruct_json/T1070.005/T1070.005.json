@@ -1,0 +1,99 @@
+{
+  "attack_technique": "T1070.005",
+  "display_name": "Indicator Removal on Host: Network Share Connection Removal",
+  "atomic_tests": [
+    {
+      "name": "Add Network Share",
+      "description": "Add a Network Share utilizing the command_prompt",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "net use c: #{share_name}\nnet share test=#{share_name} /REMARK:\"test share\" /CACHE:No"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "share_name",
+          "description": "Share to add.",
+          "type": "string",
+          "default": "\\\\test\\share"
+        }
+      ],
+      "auto_generated_guid": "14c38f32-6509-46d8-ab43-d53e32d2b131"
+    },
+    {
+      "name": "Remove Network Share",
+      "description": "Removes a Network Share utilizing the command_prompt",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "procedure": "net share #{share_name} /delete"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "share_name",
+          "description": "Share to remove.",
+          "type": "string",
+          "default": "\\\\test\\share"
+        }
+      ],
+      "auto_generated_guid": "09210ad5-1ef2-4077-9ad3-7351e13e9222"
+    },
+    {
+      "name": "Remove Network Share PowerShell",
+      "description": "Removes a Network Share utilizing PowerShell",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "procedure": "Remove-SmbShare -Name #{share_name}\nRemove-FileShare -Name #{share_name}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "share_name",
+          "description": "Share to remove.",
+          "type": "string",
+          "default": "\\\\test\\share"
+        }
+      ],
+      "auto_generated_guid": "0512d214-9512-4d22-bde7-f37e058259b3"
+    },
+    {
+      "name": "Disable Administrative Share Creation at Startup",
+      "description": "Administrative shares are hidden network shares created by Microsoft’s Windows NT operating systems that grant system administrators \nremote access to every disk volume on a network-connected system. These shares are automatically created at started unless they have been\npurposefully disabled as is done in this Atomic test. As Microsoft puts it, \"Missing administrative shares typically \nindicate that the computer in question has been compromised by malicious software.\"\nhttps://threatpost.com/conti-ransomware-gang-has-full-log4shell-attack-chain/177173/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "reg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareServer /f\nreg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareWks /f",
+        "procedure": "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareServer /t REG_DWORD /d 0 /f\nreg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters\" /v AutoShareWks /t REG_DWORD /d 0 /f"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "99c657aa-ebeb-4179-a665-69288fdd12b8"
+    },
+    {
+      "name": "Remove Administrative Shares",
+      "description": "Administrative shares are hidden network shares created by Microsoft’s Windows NT operating systems that grant system administrators \nremote access to every disk volume on a network-connected system. As Microsoft puts it, “Missing administrative shares typically \nindicate that the computer in question has been compromised by malicious software.\nhttps://threatpost.com/conti-ransomware-gang-has-full-log4shell-attack-chain/177173/",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "net share ADMIN$ /UNLIMITED >nul 2>&1\nnet share C$=C:\\ >nul 2>&1\nnet share IPC$ >nul 2>&1",
+        "procedure": "for %i in (C$ IPC$ ADMIN$) do net share %i /delete"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "4299eff5-90f1-4446-b2f3-7f4f5cfd5d62"
+    }
+  ]
+}

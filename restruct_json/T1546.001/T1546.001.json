@@ -1,0 +1,40 @@
+{
+  "attack_technique": "T1546.001",
+  "display_name": "Event Triggered Execution: Change Default File Association",
+  "atomic_tests": [
+    {
+      "name": "Change Default File Association",
+      "description": "Change Default File Association From cmd.exe of hta to notepad.\n\nUpon successful execution, cmd.exe will change the file association of .hta to notepad.exe.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "assoc  #{extension_to_change}=#{original_extension_handler}",
+        "procedure": "assoc #{extension_to_change}=#{target_extension_handler}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "target_extension_handler",
+          "description": "txtfile maps to notepad.exe",
+          "type": "path",
+          "default": "txtfile"
+        },
+        {
+          "arg_name": "extension_to_change",
+          "description": "File Extension To Hijack",
+          "type": "string",
+          "default": ".hta"
+        },
+        {
+          "arg_name": "original_extension_handler",
+          "description": "File Extension To Revert",
+          "type": "string",
+          "default": "htafile"
+        }
+      ],
+      "auto_generated_guid": "10a08978-2045-4d62-8c42-1957bbbea102"
+    }
+  ]
+}

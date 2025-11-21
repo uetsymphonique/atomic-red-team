@@ -1,0 +1,53 @@
+{
+  "attack_technique": "T1036.007",
+  "display_name": "Masquerading: Double File Extension",
+  "atomic_tests": [
+    {
+      "name": "File Extension Masquerading",
+      "description": "download and execute a file masquerading as images or Office files. Upon execution 3 calc instances and 3 vbs windows will be launched.\n\ne.g SOME_LEGIT_NAME.[doc,docx,xls,xlsx,pdf,rtf,png,jpg,etc.].[exe,vbs,js,ps1,etc] (Quartelyreport.docx.exe)",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "del /f %temp%\\T1036.007_masquerading.docx.exe > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.pdf.exe > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.ps1.exe > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.xls.vbs > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.xlsx.vbs > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.png.vbs > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.doc.ps1 > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.pdf.ps1 > nul 2>&1\ndel /f %temp%\\T1036.007_masquerading.rtf.ps1 > nul 2>&1",
+        "procedure": "copy \"#{exe_path}\" %temp%\\T1036.007_masquerading.docx.exe /Y\ncopy \"#{exe_path}\" %temp%\\T1036.007_masquerading.pdf.exe /Y\ncopy \"#{exe_path}\" %temp%\\T1036.007_masquerading.ps1.exe /Y\ncopy \"#{vbs_path}\" %temp%\\T1036.007_masquerading.xls.vbs /Y\ncopy \"#{vbs_path}\" %temp%\\T1036.007_masquerading.xlsx.vbs /Y\ncopy \"#{vbs_path}\" %temp%\\T1036.007_masquerading.png.vbs /Y\ncopy \"#{ps1_path}\" %temp%\\T1036.007_masquerading.doc.ps1 /Y\ncopy \"#{ps1_path}\" %temp%\\T1036.007_masquerading.pdf.ps1 /Y\ncopy \"#{ps1_path}\" %temp%\\T1036.007_masquerading.rtf.ps1 /Y\n%temp%\\T1036.007_masquerading.docx.exe\n%temp%\\T1036.007_masquerading.pdf.exe\n%temp%\\T1036.007_masquerading.ps1.exe\n%temp%\\T1036.007_masquerading.xls.vbs\n%temp%\\T1036.007_masquerading.xlsx.vbs\n%temp%\\T1036.007_masquerading.png.vbs\nC:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -File %temp%\\T1036.007_masquerading.doc.ps1\nC:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -File %temp%\\T1036.007_masquerading.pdf.ps1\nC:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -File %temp%\\T1036.007_masquerading.rtf.ps1"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "exe_path",
+          "description": "path to exe to use when creating masquerading files",
+          "type": "path",
+          "default": "C:\\Windows\\System32\\calc.exe"
+        },
+        {
+          "arg_name": "vbs_path",
+          "description": "path of vbs to use when creating masquerading files",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1036.007\\src\\T1036.007_masquerading.vbs"
+        },
+        {
+          "arg_name": "ps1_path",
+          "description": "path of powershell script to use when creating masquerading files",
+          "type": "path",
+          "default": "PathToAtomicsFolder\\T1036.007\\src\\T1036.007_masquerading.ps1"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "File to copy must exist on disk at specified location (#{vbs_path})",
+          "prereq_command": "if (Test-Path \"#{vbs_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{vbs_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1036.007/src/T1036.007_masquerading.vbs\" -OutFile \"#{vbs_path}\""
+        },
+        {
+          "description": "File to copy must exist on disk at specified location (#{ps1_path})",
+          "prereq_command": "if (Test-Path \"#{ps1_path}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory (split-path \"#{ps1_path}\") -ErrorAction ignore | Out-Null\nInvoke-WebRequest \"https://github.com/redcanaryco/atomic-red-team/raw/master/atomics/T1036.007/src/T1036.007_masquerading.ps1\" -OutFile \"#{ps1_path}\""
+        }
+      ],
+      "dependency_executor_name": "powershell",
+      "auto_generated_guid": "c7fa0c3b-b57f-4cba-9118-863bf4e653fc"
+    }
+  ]
+}

