@@ -1,6 +1,4 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://example.com/schemas/atomic-schema.json",
     "title": "Atomic Red Team Technique (Normalized)",
     "description": "Schema for normalized Atomic Red Team technique objects intended for LLM structured output. Uses array form for input_arguments and a unified 'procedure' field in executor.",
     "type": "object",
@@ -13,16 +11,18 @@
     "properties": {
         "attack_technique": {
             "type": "string",
-            "description": "MITRE ATT&CK technique identifier",
+            "description": "MITRE ATT&CK technique ID of this file (e.g., T1047 or T1047.001). Must match the technique represented by the atomic tests.",
             "pattern": "^T\\d{4}(?:\\.\\d{3})?$"
         },
         "display_name": {
             "type": "string",
-            "minLength": 5
+            "minLength": 5,
+            "description": "Human-readable technique name from ATT&CK (e.g., 'Windows Management Instrumentation')."
         },
         "atomic_tests": {
             "type": "array",
             "minItems": 1,
+            "description": "List of atomic test cases describing concrete procedures for the technique.",
             "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -35,18 +35,22 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "Title of the atomic test (concise, action-oriented)."
                     },
                     "description": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "description": "What the test does and what to expect; may include context, caveats, and references."
                     },
                     "supported_platforms": {
                         "type": "array",
                         "minItems": 1,
                         "uniqueItems": true,
+                        "description": "Target platforms on which this atomic test is expected to work.",
                         "items": {
                             "type": "string",
+                            "description": "OS or environment identifier.",
                             "enum": [
                                 "windows",
                                 "macos",
@@ -71,9 +75,11 @@
                             "name",
                             "procedure"
                         ],
+                        "description": "Execution details. 'procedure' contains either manual steps or a command line to run.",
                         "properties": {
                             "name": {
                                 "type": "string",
+                                "description": "Execution environment. 'command_prompt' implies Windows cmd, 'powershell' is PowerShell, 'bash'/'sh' are shells, 'manual' requires human steps.",
                                 "enum": [
                                     "manual",
                                     "powershell",
@@ -84,21 +90,23 @@
                             },
                             "elevation_required": {
                                 "type": "boolean",
-                                "default": false
+                                "default": false,
+                                "description": "True if admin/root is required to run the procedure successfully."
                             },
                             "procedure": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "Unified field containing 'steps' for manual executors or 'command' for command-based executors."
+                                "description": "Unified content to execute: for 'manual', human-readable steps; for others, the exact command(s). Supports placeholders like #{arg_name} that must match input_arguments."
                             },
                             "cleanup_command": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "Optional command(s) to revert changes or stop processes after execution."
                             }
                         }
                     },
                     "input_arguments": {
                         "type": "array",
-                        "description": "Array form of inputs; each includes arg_name and metadata.",
+                        "description": "Input parameters used in the 'procedure' via placeholders like #{arg_name}.",
                         "items": {
                             "type": "object",
                             "additionalProperties": false,
@@ -111,15 +119,17 @@
                                 "arg_name": {
                                     "type": "string",
                                     "minLength": 2,
-                                    "pattern": "^[\\w_-]+$"
+                                    "pattern": "^[\\w_-]+$",
+                                    "description": "Identifier referenced in the procedure as #{arg_name}."
                                 },
                                 "description": {
                                     "type": "string",
-                                    "minLength": 1
+                                    "minLength": 1,
+                                    "description": "What the argument represents and how it affects execution."
                                 },
                                 "type": {
                                     "type": "string",
-                                    "description": "Argument type",
+                                    "description": "Argument data type. Use 'path' for filesystem paths; 'url' for URLs.",
                                     "enum": [
                                         "url",
                                         "string",
@@ -129,7 +139,7 @@
                                     ]
                                 },
                                 "default": {
-                                    "description": "Default value for the argument",
+                                    "description": "Default value used if none is provided. May be omitted.",
                                     "oneOf": [
                                         {
                                             "type": "string"
@@ -150,6 +160,7 @@
                     },
                     "dependencies": {
                         "type": "array",
+                        "description": "Optional preconditions for the test (e.g., required files, tools, or environment state).",
                         "items": {
                             "type": "object",
                             "additionalProperties": false,
@@ -160,24 +171,27 @@
                             "properties": {
                                 "description": {
                                     "type": "string",
-                                    "minLength": 1
+                                    "minLength": 1,
+                                    "description": "What must be true/available before executing the procedure."
                                 },
                                 "prereq_command": {
                                     "type": "string",
-                                    "minLength": 1
+                                    "minLength": 1,
+                                    "description": "Command to check whether the prerequisite is satisfied. Exit code 0 indicates success."
                                 },
                                 "get_prereq_command": {
                                     "type": [
                                         "string",
                                         "null"
-                                    ]
+                                    ],
+                                    "description": "Command to install or fetch the prerequisite when missing. Optional."
                                 }
                             }
                         }
                     },
                     "dependency_executor_name": {
                         "type": "string",
-                        "description": "Executor to use for dependency prereq/get-prereq commands. Optional; if omitted, use executor.name.",
+                        "description": "Executor used for dependency commands (check/get). Optional; defaults to the main executor.name if not set.",
                         "enum": [
                             "manual",
                             "powershell",
