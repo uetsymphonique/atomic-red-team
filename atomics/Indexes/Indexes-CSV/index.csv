@@ -38,6 +38,7 @@ defense-evasion,T1006,Direct Volume Access,1,Read volume boot sector via DOS dev
 defense-evasion,T1564.008,Hide Artifacts: Email Hiding Rules,1,New-Inbox Rule to Hide E-mail in M365,30f7d3d1-78e2-4bf0-9efa-a175b5fce2a9,powershell
 defense-evasion,T1027.013,Obfuscated Files or Information: Encrypted/Encoded File,1,Decode Eicar File and Write to File,7693ccaa-8d64-4043-92a5-a2eb70359535,powershell
 defense-evasion,T1027.013,Obfuscated Files or Information: Encrypted/Encoded File,2,Decrypt Eicar File and Write to File,b404caaa-12ce-43c7-9214-62a531c044f7,powershell
+defense-evasion,T1027.013,Obfuscated Files or Information: Encrypted/Encoded File,3,Password-Protected ZIP Payload Extraction and Execution,c2ca068a-eb1e-498f-9f93-3d554c455916,bash
 defense-evasion,T1014,Rootkit,1,Loadable Kernel Module based Rootkit,dfb50072-e45a-4c75-a17e-a484809c8553,sh
 defense-evasion,T1014,Rootkit,2,Loadable Kernel Module based Rootkit,75483ef8-f10f-444a-bf02-62eb0e48db6f,sh
 defense-evasion,T1014,Rootkit,3,dynamic-linker based rootkit (libprocesshider),1338bf0c-fd0c-48c0-9e65-329f18e2c0d3,sh
@@ -555,6 +556,7 @@ defense-evasion,T1027,Obfuscated Files or Information,7,Obfuscated Command in Po
 defense-evasion,T1027,Obfuscated Files or Information,8,Obfuscated Command Line using special Unicode characters,e68b945c-52d0-4dd9-a5e8-d173d70c448f,manual
 defense-evasion,T1027,Obfuscated Files or Information,9,Snake Malware Encrypted crmlog file,7e47ee60-9dd1-4269-9c4f-97953b183268,powershell
 defense-evasion,T1027,Obfuscated Files or Information,10,Execution from Compressed JScript File,fad04df1-5229-4185-b016-fb6010cd87ac,command_prompt
+defense-evasion,T1027,Obfuscated Files or Information,11,Obfuscated PowerShell Command via Character Array,6683baf0-6e77-4f58-b114-814184ea8150,powershell
 defense-evasion,T1564.006,Run Virtual Instance,1,Register Portable Virtualbox,c59f246a-34f8-4e4d-9276-c295ef9ba0dd,command_prompt
 defense-evasion,T1564.006,Run Virtual Instance,2,Create and start VirtualBox virtual machine,88b81702-a1c0-49a9-95b2-2dd53d755767,command_prompt
 defense-evasion,T1564.006,Run Virtual Instance,3,Create and start Hyper-V virtual machine,fb8d4d7e-f5a4-481c-8867-febf13f8b6d3,powershell
@@ -603,6 +605,7 @@ defense-evasion,T1562.008,Impair Defenses: Disable Cloud Logs,7,AWS - CloudWatch
 defense-evasion,T1562.008,Impair Defenses: Disable Cloud Logs,8,AWS CloudWatch Log Stream Deletes,33ca84bc-4259-4943-bd36-4655dc420932,sh
 defense-evasion,T1562.008,Impair Defenses: Disable Cloud Logs,9,Office 365 - Set Audit Bypass For a Mailbox,c9a2f6fe-7197-488c-af6d-10c782121ca6,powershell
 defense-evasion,T1562.008,Impair Defenses: Disable Cloud Logs,10,GCP - Delete Activity Event Log,d56152ec-01d9-42a2-877c-aac1f6ebe8e6,sh
+defense-evasion,T1562.008,Impair Defenses: Disable Cloud Logs,11,AWS - Config Logs Disabled,4608bc1b-e682-466b-a7d7-dbd76760db31,sh
 defense-evasion,T1564.003,Hide Artifacts: Hidden Window,1,Hidden Window,f151ee37-9e2b-47e6-80e4-550b9f999b7a,powershell
 defense-evasion,T1564.003,Hide Artifacts: Hidden Window,2,Headless Browser Accessing Mockbin,0ad9ab92-c48c-4f08-9b20-9633277c4646,command_prompt
 defense-evasion,T1564.003,Hide Artifacts: Hidden Window,3,Hidden Window-Conhost Execution,5510d22f-2595-4911-8456-4d630c978616,powershell
@@ -927,6 +930,11 @@ privilege-escalation,T1574.009,Hijack Execution Flow: Path Interception by Unquo
 privilege-escalation,T1037.005,Boot or Logon Initialization Scripts: Startup Items,1,Add file to Local Library StartupItems,134627c3-75db-410e-bff8-7a920075f198,sh
 privilege-escalation,T1037.005,Boot or Logon Initialization Scripts: Startup Items,2,Add launch script to launch daemon,fc369906-90c7-4a15-86fd-d37da624dde6,bash
 privilege-escalation,T1037.005,Boot or Logon Initialization Scripts: Startup Items,3,Add launch script to launch agent,10cf5bec-49dd-4ebf-8077-8f47e420096f,bash
+privilege-escalation,T1546.018,Event Triggered Execution: Python Startup Hooks,1,Python Startup Hook - atomic_hook.pth (Windows),57289962-21dc-4501-b756-80cd30608d9f,powershell
+privilege-escalation,T1546.018,Event Triggered Execution: Python Startup Hooks,2,Python Startup Hook - usercustomize.py (Windows),05cc7a2c-ce32-46f2-a358-f27f76718c39,powershell
+privilege-escalation,T1546.018,Event Triggered Execution: Python Startup Hooks,3,Python Startup Hook - atomic_hook.pth (Linux),a58c066d-f2f0-42a2-ab70-30af73f89e66,sh
+privilege-escalation,T1546.018,Event Triggered Execution: Python Startup Hooks,4,Python Startup Hook - atomic_hook.pth (macOS),28ca4f81-fa96-47ff-8555-dde98017e89b,sh
+privilege-escalation,T1546.018,Event Triggered Execution: Python Startup Hooks,5,Python Startup Hook - usercustomize.py (Linux / MacOS),6e78084a-a433-4702-a838-cc7b765d87e8,sh
 privilege-escalation,T1546.010,Event Triggered Execution: AppInit DLLs,1,Install AppInit Shim,a58d9386-3080-4242-ab5f-454c16503d18,command_prompt
 privilege-escalation,T1546.002,Event Triggered Execution: Screensaver,1,Set Arbitrary Binary as Screensaver,281201e7-de41-4dc9-b73d-f288938cbb64,command_prompt
 privilege-escalation,T1543.001,Create or Modify System Process: Launch Agent,1,Launch Agent,a5983dee-bf6c-4eaf-951c-dbc1a7b90900,bash
@@ -1165,10 +1173,9 @@ persistence,T1556.002,Modify Authentication Process: Password Filter DLL,2,Insta
 persistence,T1505.005,Server Software Component: Terminal Services DLL,1,Simulate Patching termsrv.dll,0b2eadeb-4a64-4449-9d43-3d999f4a317b,powershell
 persistence,T1505.005,Server Software Component: Terminal Services DLL,2,Modify Terminal Services DLL Path,18136e38-0530-49b2-b309-eed173787471,powershell
 persistence,T1176,Browser Extensions,1,Chrome/Chromium (Developer Mode),3ecd790d-2617-4abf-9a8c-4e8d47da9ee1,manual
-persistence,T1176,Browser Extensions,2,Chrome/Chromium (Chrome Web Store),4c83940d-8ca5-4bb2-8100-f46dc914bc3f,manual
-persistence,T1176,Browser Extensions,3,Firefox,cb790029-17e6-4c43-b96f-002ce5f10938,manual
-persistence,T1176,Browser Extensions,4,Edge Chromium Addon - VPN,3d456e2b-a7db-4af8-b5b3-720e7c4d9da5,manual
-persistence,T1176,Browser Extensions,5,Google Chrome Load Unpacked Extension With Command Line,7a714703-9f6b-461c-b06d-e6aeac650f27,powershell
+persistence,T1176,Browser Extensions,2,Firefox,cb790029-17e6-4c43-b96f-002ce5f10938,manual
+persistence,T1176,Browser Extensions,3,Edge Chromium Addon - VPN,3d456e2b-a7db-4af8-b5b3-720e7c4d9da5,manual
+persistence,T1176,Browser Extensions,4,Google Chrome Load Unpacked Extension With Command Line,7a714703-9f6b-461c-b06d-e6aeac650f27,powershell
 persistence,T1546.011,Event Triggered Execution: Application Shimming,1,Application Shim Installation,9ab27e22-ee62-4211-962b-d36d9a0e6a18,command_prompt
 persistence,T1546.011,Event Triggered Execution: Application Shimming,2,New shim database files created in the default shim database directory,aefd6866-d753-431f-a7a4-215ca7e3f13d,powershell
 persistence,T1546.011,Event Triggered Execution: Application Shimming,3,Registry key creation and/or modification events for SDB,9b6a06f9-ab5e-4e8d-8289-1df4289db02f,powershell
@@ -1404,6 +1411,11 @@ persistence,T1574.009,Hijack Execution Flow: Path Interception by Unquoted Path,
 persistence,T1037.005,Boot or Logon Initialization Scripts: Startup Items,1,Add file to Local Library StartupItems,134627c3-75db-410e-bff8-7a920075f198,sh
 persistence,T1037.005,Boot or Logon Initialization Scripts: Startup Items,2,Add launch script to launch daemon,fc369906-90c7-4a15-86fd-d37da624dde6,bash
 persistence,T1037.005,Boot or Logon Initialization Scripts: Startup Items,3,Add launch script to launch agent,10cf5bec-49dd-4ebf-8077-8f47e420096f,bash
+persistence,T1546.018,Event Triggered Execution: Python Startup Hooks,1,Python Startup Hook - atomic_hook.pth (Windows),57289962-21dc-4501-b756-80cd30608d9f,powershell
+persistence,T1546.018,Event Triggered Execution: Python Startup Hooks,2,Python Startup Hook - usercustomize.py (Windows),05cc7a2c-ce32-46f2-a358-f27f76718c39,powershell
+persistence,T1546.018,Event Triggered Execution: Python Startup Hooks,3,Python Startup Hook - atomic_hook.pth (Linux),a58c066d-f2f0-42a2-ab70-30af73f89e66,sh
+persistence,T1546.018,Event Triggered Execution: Python Startup Hooks,4,Python Startup Hook - atomic_hook.pth (macOS),28ca4f81-fa96-47ff-8555-dde98017e89b,sh
+persistence,T1546.018,Event Triggered Execution: Python Startup Hooks,5,Python Startup Hook - usercustomize.py (Linux / MacOS),6e78084a-a433-4702-a838-cc7b765d87e8,sh
 persistence,T1197,BITS Jobs,1,Bitsadmin Download (cmd),3c73d728-75fb-4180-a12f-6712864d7421,command_prompt
 persistence,T1197,BITS Jobs,2,Bitsadmin Download (PowerShell),f63b8bc4-07e5-4112-acba-56f646f3f0bc,powershell
 persistence,T1197,BITS Jobs,3,"Persist, Download, & Execute",62a06ec5-5754-47d2-bcfc-123d8314c6ae,command_prompt
@@ -1559,6 +1571,7 @@ collection,T1113,Screen Capture,6,Capture Linux Desktop using Import Tool (freeb
 collection,T1113,Screen Capture,7,Windows Screencapture,3c898f62-626c-47d5-aad2-6de873d69153,powershell
 collection,T1113,Screen Capture,8,Windows Screen Capture (CopyFromScreen),e9313014-985a-48ef-80d9-cde604ffc187,powershell
 collection,T1113,Screen Capture,9,Windows Recall Feature Enabled - DisableAIDataAnalysis Value Deleted,5a496325-0115-4274-8eb9-755b649ad0fb,powershell
+collection,T1113,Screen Capture,10,RDP Bitmap Cache Extraction via bmc-tools,98f19852-7348-4f99-9e15-6ff4320464c7,powershell
 collection,T1056.001,Input Capture: Keylogging,1,Input Capture,d9b633ca-8efb-45e6-b838-70f595c6ae26,powershell
 collection,T1056.001,Input Capture: Keylogging,2,Living off the land Terminal Input Capture on Linux with pam.d,9c6bdb34-a89f-4b90-acb1-5970614c711b,sh
 collection,T1056.001,Input Capture: Keylogging,3,Logging bash history to syslog,0e59d59d-3265-4d35-bebd-bf5c1ec40db5,sh
@@ -1828,6 +1841,8 @@ credential-access,T1003.003,OS Credential Dumping: NTDS,6,Create Volume Shadow C
 credential-access,T1003.003,OS Credential Dumping: NTDS,7,Create Volume Shadow Copy with Powershell,542bb97e-da53-436b-8e43-e0a7d31a6c24,powershell
 credential-access,T1003.003,OS Credential Dumping: NTDS,8,Create Symlink to Volume Shadow Copy,21748c28-2793-4284-9e07-d6d028b66702,command_prompt
 credential-access,T1003.003,OS Credential Dumping: NTDS,9,Create Volume Shadow Copy with diskshadow,b385996c-0e7d-4e27-95a4-aca046b119a7,command_prompt
+credential-access,T1003.003,OS Credential Dumping: NTDS,10,Copy NTDS in low level NTFS acquisition via MFT parsing,f57cb283-c131-4e2f-8a6c-363d575748b2,powershell
+credential-access,T1003.003,OS Credential Dumping: NTDS,11,Copy NTDS in low level NTFS acquisition via fsutil,c7be89f7-5d06-4321-9f90-8676a77e0502,powershell
 credential-access,T1558.003,Steal or Forge Kerberos Tickets: Kerberoasting,1,Request for service tickets,3f987809-3681-43c8-bcd8-b3ff3a28533a,powershell
 credential-access,T1558.003,Steal or Forge Kerberos Tickets: Kerberoasting,2,Rubeus kerberoast,14625569-6def-4497-99ac-8e7817105b55,powershell
 credential-access,T1558.003,Steal or Forge Kerberos Tickets: Kerberoasting,3,Extract all accounts in use as SPN using setspn,e6f4affd-d826-4871-9a62-6c9004b8fe06,command_prompt
@@ -2198,6 +2213,7 @@ impact,T1486,Data Encrypted for Impact,8,Data Encrypted with GPG4Win,4541e2c2-33
 impact,T1486,Data Encrypted for Impact,9,Data Encrypt Using DiskCryptor,44b68e11-9da2-4d45-a0d9-893dabd60f30,command_prompt
 impact,T1486,Data Encrypted for Impact,10,Akira Ransomware drop Files with .akira Extension and Ransomnote,ab3f793f-2dcc-4da5-9c71-34988307263f,powershell
 impact,T1496,Resource Hijacking,1,FreeBSD/macOS/Linux - Simulate CPU Load with Yes,904a5a0e-fb02-490d-9f8d-0e256eb37549,sh
+impact,T1496,Resource Hijacking,2,Windows - Simulate CPU Load with PowerShell,44315fb0-f78d-4cef-b10f-cf21c1fe2c75,powershell
 impact,T1485,Data Destruction,1,Windows - Overwrite file with SysInternals SDelete,476419b5-aebf-4366-a131-ae3e8dae5fc2,powershell
 impact,T1485,Data Destruction,2,FreeBSD/macOS/Linux - Overwrite file with DD,38deee99-fd65-4031-bec8-bfa4f9f26146,sh
 impact,T1485,Data Destruction,3,Overwrite deleted data on C drive,321fd25e-0007-417f-adec-33232252be19,command_prompt
@@ -2215,6 +2231,7 @@ impact,T1490,Inhibit System Recovery,9,Disable System Restore Through Registry,6
 impact,T1490,Inhibit System Recovery,10,Windows - vssadmin Resize Shadowstorage Volume,da558b07-69ae-41b9-b9d4-4d98154a7049,powershell
 impact,T1490,Inhibit System Recovery,11,Modify VSS Service Permissions,a4420f93-5386-4290-b780-f4f66abc7070,command_prompt
 impact,T1490,Inhibit System Recovery,12,Disable Time Machine,ed952f70-91d4-445a-b7ff-30966bfb1aff,sh
+impact,T1490,Inhibit System Recovery,13,Windows - Delete Volume Shadow Copies via Diskshadow,42111a6f-7e7f-482c-9b1b-3cfd090b999c,powershell
 impact,T1529,System Shutdown/Reboot,1,Shutdown System - Windows,ad254fa8-45c0-403b-8c77-e00b3d3e7a64,command_prompt
 impact,T1529,System Shutdown/Reboot,2,Restart System - Windows,f4648f0d-bf78-483c-bafc-3ec99cd1c302,command_prompt
 impact,T1529,System Shutdown/Reboot,3,Restart System via `shutdown` - FreeBSD/macOS/Linux,6326dbc4-444b-4c04-88f4-27e94d0327cb,sh

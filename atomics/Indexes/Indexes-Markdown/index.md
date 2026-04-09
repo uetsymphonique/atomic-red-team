@@ -54,6 +54,7 @@
 - [T1027.013 Obfuscated Files or Information: Encrypted/Encoded File](../../T1027.013/T1027.013.md)
   - Atomic Test #1: Decode Eicar File and Write to File [windows, macos, linux]
   - Atomic Test #2: Decrypt Eicar File and Write to File [windows, macos, linux]
+  - Atomic Test #3: Password-Protected ZIP Payload Extraction and Execution [linux, macos]
 - [T1014 Rootkit](../../T1014/T1014.md)
   - Atomic Test #1: Loadable Kernel Module based Rootkit [linux]
   - Atomic Test #2: Loadable Kernel Module based Rootkit [linux]
@@ -698,6 +699,7 @@
   - Atomic Test #8: Obfuscated Command Line using special Unicode characters [windows]
   - Atomic Test #9: Snake Malware Encrypted crmlog file [windows]
   - Atomic Test #10: Execution from Compressed JScript File [windows]
+  - Atomic Test #11: Obfuscated PowerShell Command via Character Array [windows]
 - T1556.006 Multi-Factor Authentication [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - T1036.001 Invalid Code Signature [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1564.006 Run Virtual Instance](../../T1564.006/T1564.006.md)
@@ -770,6 +772,7 @@
   - Atomic Test #8: AWS CloudWatch Log Stream Deletes [iaas:aws]
   - Atomic Test #9: Office 365 - Set Audit Bypass For a Mailbox [office-365]
   - Atomic Test #10: GCP - Delete Activity Event Log [iaas:gcp]
+  - Atomic Test #11: AWS - Config Logs Disabled [iaas:aws]
 - [T1564.003 Hide Artifacts: Hidden Window](../../T1564.003/T1564.003.md)
   - Atomic Test #1: Hidden Window [windows]
   - Atomic Test #2: Headless Browser Accessing Mockbin [windows]
@@ -1226,7 +1229,12 @@
   - Atomic Test #2: Add launch script to launch daemon [macos]
   - Atomic Test #3: Add launch script to launch agent [macos]
 - T1078.002 Domain Accounts [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
-- T1546.018 Python Startup Hooks [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
+- [T1546.018 Event Triggered Execution: Python Startup Hooks](../../T1546.018/T1546.018.md)
+  - Atomic Test #1: Python Startup Hook - atomic_hook.pth (Windows) [windows]
+  - Atomic Test #2: Python Startup Hook - usercustomize.py (Windows) [windows]
+  - Atomic Test #3: Python Startup Hook - atomic_hook.pth (Linux) [linux]
+  - Atomic Test #4: Python Startup Hook - atomic_hook.pth (macOS) [macos]
+  - Atomic Test #5: Python Startup Hook - usercustomize.py (Linux / MacOS) [linux, macos]
 - T1037.003 Network Logon Script [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1546.010 Event Triggered Execution: AppInit DLLs](../../T1546.010/T1546.010.md)
   - Atomic Test #1: Install AppInit Shim [windows]
@@ -1573,10 +1581,9 @@
   - Atomic Test #2: Modify Terminal Services DLL Path [windows]
 - [T1176 Browser Extensions](../../T1176/T1176.md)
   - Atomic Test #1: Chrome/Chromium (Developer Mode) [linux, windows, macos]
-  - Atomic Test #2: Chrome/Chromium (Chrome Web Store) [linux, windows, macos]
-  - Atomic Test #3: Firefox [linux, windows, macos]
-  - Atomic Test #4: Edge Chromium Addon - VPN [windows, macos]
-  - Atomic Test #5: Google Chrome Load Unpacked Extension With Command Line [windows]
+  - Atomic Test #2: Firefox [linux, windows, macos]
+  - Atomic Test #3: Edge Chromium Addon - VPN [windows, macos]
+  - Atomic Test #4: Google Chrome Load Unpacked Extension With Command Line [windows]
 - T1137.005 Outlook Rules [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - T1098.007 Additional Local or Domain Groups [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1546.011 Event Triggered Execution: Application Shimming](../../T1546.011/T1546.011.md)
@@ -1874,7 +1881,12 @@
   - Atomic Test #3: Add launch script to launch agent [macos]
 - T1671 Cloud Application Integration [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - T1078.002 Domain Accounts [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
-- T1546.018 Python Startup Hooks [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
+- [T1546.018 Event Triggered Execution: Python Startup Hooks](../../T1546.018/T1546.018.md)
+  - Atomic Test #1: Python Startup Hook - atomic_hook.pth (Windows) [windows]
+  - Atomic Test #2: Python Startup Hook - usercustomize.py (Windows) [windows]
+  - Atomic Test #3: Python Startup Hook - atomic_hook.pth (Linux) [linux]
+  - Atomic Test #4: Python Startup Hook - atomic_hook.pth (macOS) [macos]
+  - Atomic Test #5: Python Startup Hook - usercustomize.py (Linux / MacOS) [linux, macos]
 - T1037.003 Network Logon Script [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1197 BITS Jobs](../../T1197/T1197.md)
   - Atomic Test #1: Bitsadmin Download (cmd) [windows]
@@ -2113,6 +2125,7 @@
   - Atomic Test #7: Windows Screencapture [windows]
   - Atomic Test #8: Windows Screen Capture (CopyFromScreen) [windows]
   - Atomic Test #9: Windows Recall Feature Enabled - DisableAIDataAnalysis Value Deleted [windows]
+  - Atomic Test #10: RDP Bitmap Cache Extraction via bmc-tools [windows]
 - T1557 Adversary-in-the-Middle [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1056.001 Input Capture: Keylogging](../../T1056.001/T1056.001.md)
   - Atomic Test #1: Input Capture [windows]
@@ -2509,6 +2522,8 @@
   - Atomic Test #7: Create Volume Shadow Copy with Powershell [windows]
   - Atomic Test #8: Create Symlink to Volume Shadow Copy [windows]
   - Atomic Test #9: Create Volume Shadow Copy with diskshadow [windows]
+  - Atomic Test #10: Copy NTDS in low level NTFS acquisition via MFT parsing [windows]
+  - Atomic Test #11: Copy NTDS in low level NTFS acquisition via fsutil [windows]
 - [T1558.003 Steal or Forge Kerberos Tickets: Kerberoasting](../../T1558.003/T1558.003.md)
   - Atomic Test #1: Request for service tickets [windows]
   - Atomic Test #2: Rubeus kerberoast [windows]
@@ -3060,6 +3075,7 @@
 - T1499 Endpoint Denial of Service [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1496 Resource Hijacking](../../T1496/T1496.md)
   - Atomic Test #1: FreeBSD/macOS/Linux - Simulate CPU Load with Yes [linux, macos]
+  - Atomic Test #2: Windows - Simulate CPU Load with PowerShell [windows]
 - T1565.002 Transmitted Data Manipulation [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1485 Data Destruction](../../T1485/T1485.md)
   - Atomic Test #1: Windows - Overwrite file with SysInternals SDelete [windows]
@@ -3082,6 +3098,7 @@
   - Atomic Test #10: Windows - vssadmin Resize Shadowstorage Volume [windows]
   - Atomic Test #11: Modify VSS Service Permissions [windows]
   - Atomic Test #12: Disable Time Machine [macos]
+  - Atomic Test #13: Windows - Delete Volume Shadow Copies via Diskshadow [windows]
 - T1561.001 Disk Content Wipe [CONTRIBUTE A TEST](https://github.com/redcanaryco/atomic-red-team/wiki/Contributing)
 - [T1529 System Shutdown/Reboot](../../T1529/T1529.md)
   - Atomic Test #1: Shutdown System - Windows [windows]
