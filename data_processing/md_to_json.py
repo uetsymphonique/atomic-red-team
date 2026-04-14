@@ -76,9 +76,9 @@ def split_atomic_tests_sections(text: str) -> List[Tuple[str, str]]:
     """
     Splits the document into atomic test sections.
     Returns list of tuples: (section_title_line, section_text)
-    Section title line looks like: '## Atomic Test #<n> - <name>'
+    Section title line looks like: '### Atomic Test #<n>: <name>'
     """
-    pattern = re.compile(r"^##\s+Atomic Test\s+#\d+\s+-\s+.+$", re.MULTILINE)
+    pattern = re.compile(r"^###\s+Atomic Test\s+#\d+\s*:\s*.+$", re.MULTILINE)
     matches = list(pattern.finditer(text))
     sections: List[Tuple[str, str]] = []
     for i, match in enumerate(matches):
@@ -177,7 +177,7 @@ def parse_supported_platforms(section: str) -> List[str]:
 
 
 def parse_auto_generated_guid(section: str) -> Optional[str]:
-    m = re.search(r"^\*\*auto_generated_guid:\*\*\s*([0-9a-fA-F-]{36})\s*$", section, re.MULTILINE)
+    m = re.search(r"^\*\*auto_generated_guid:\*\*\s*`?([0-9a-fA-F-]{36})`?\s*$", section, re.MULTILINE)
     return m.group(1) if m else None
 
 
@@ -187,11 +187,11 @@ def parse_inputs_table(section: str) -> Dict[str, Dict[str, Optional[str]]]:
     Returns dict: name -> { description, type, default }
     """
     # Find the heading first
-    if not re.search(r"^####\s+Inputs:", section, re.MULTILINE):
+    if not re.search(r"^####\s+Inputs:?", section, re.MULTILINE):
         return {}
     # Capture table block: lines starting with '|' until a blank line or next heading
     table_match = re.search(
-        r"^####\s+Inputs:\s*\n(?P<header>\|.+\|\s*\n\|[-\s|]+\|\s*\n)(?P<body>(?:\|.*\|\s*\n)+)",
+        r"^####\s+Inputs:?\s*\n(?P<header>\|.+\|\s*\n\|[-\s|]+\|\s*\n)(?P<body>(?:\|.*\|\s*\n)+)",
         section,
         re.MULTILINE,
     )
@@ -249,15 +249,15 @@ def parse_executor_block(section: str) -> Tuple[Dict, int]:
     """
     # Manual steps heading
     manual_heading = re.search(
-        r"^####\s+Run it with these steps!\s*(?P<elev>Elevation Required.*)?$",
+        r"^####\s+(?:Attack Commands:\s+)?Run it with these steps!\s*(?P<elev>Elevation Required.*)?$",
         section,
         re.MULTILINE,
     )
     if manual_heading:
         steps_text, _, end_idx = extract_between(
             section,
-            r"^####\s+Run it with these steps!.*$",
-            end_regexes=[r"^####\s", r"^##\s"],
+            r"^####\s+(?:Attack Commands:\s+)?Run it with these steps!.*$",
+            end_regexes=[r"^####\s", r"^###\s"],
         )
         executor = {
             "name": "manual",
@@ -287,7 +287,7 @@ def parse_executor_block(section: str) -> Tuple[Dict, int]:
     cleanup_cmd: Optional[str] = None
 
     # Optionally a cleanup section appears after
-    cleanup_heading = re.search(r"^####\s+Cleanup Commands:\s*$", section[cmd_heading.end():], re.MULTILINE)
+    cleanup_heading = re.search(r"^####\s+Cleanup Commands\s*$", section[cmd_heading.end():], re.MULTILINE)
     last_index = cmd_heading.end()
     if cleanup_heading:
         cleanup_abs_index = cmd_heading.end() + cleanup_heading.end()
@@ -331,7 +331,7 @@ def parse_dependencies(section: str, test_executor_name: str) -> Tuple[Optional[
     dependency_executor_name: Optional[str] = dep_exec_printed if dep_exec_printed != test_executor_name else None
 
     deps: List[Dict] = []
-    # Each dependency block is a trio of '##### Description:', '##### Check Prereq Commands:' (code), '##### Get Prereq Commands:' (code)
+    # Each dependency block is a trio of '##### Description:', '###### Check Prereq Commands' (code), '###### Get Prereq Commands' (code)
     # We'll iterate sequentially after the heading
     pos = dep_heading.end()
     while True:
@@ -341,12 +341,12 @@ def parse_dependencies(section: str, test_executor_name: str) -> Tuple[Optional[
         desc_abs_start = pos + m_desc.start()
         desc_text = m_desc.group("desc").strip()
         # Check prereq block
-        m_check = re.search(r"^#####\s+Check Prereq Commands:\s*$", section[desc_abs_start:], re.MULTILINE)
+        m_check = re.search(r"^######\s+Check Prereq Commands\s*$", section[desc_abs_start:], re.MULTILINE)
         if not m_check:
             break
         check_block = parse_next_code_block(desc_abs_start + m_check.end(), section)
         # Get prereq block
-        m_get = re.search(r"^#####\s+Get Prereq Commands:\s*$", section[desc_abs_start + m_check.end():], re.MULTILINE)
+        m_get = re.search(r"^######\s+Get Prereq Commands\s*$", section[desc_abs_start + m_check.end():], re.MULTILINE)
         get_block = None
         if m_get:
             get_block = parse_next_code_block(desc_abs_start + m_check.end() + m_get.end(), section)
@@ -369,14 +369,14 @@ def parse_dependencies(section: str, test_executor_name: str) -> Tuple[Optional[
 
 def parse_test_section(title_line: str, section: str) -> Dict:
     # Name from title line
-    m = re.match(r"^##\s+Atomic Test\s+#\d+\s+-\s+(.+)$", title_line)
+    m = re.match(r"^###\s+Atomic Test\s+#\d+\s*:\s*(.+)$", title_line)
     name = m.group(1).strip() if m else "Unknown"
 
     # Description is text between title and the Supported Platforms line
     desc_text, _, _ = extract_between(
         section,
-        r"^##\s+Atomic Test\s+#\d+\s+-\s+.+$",
-        end_regexes=[r"^\*\*Supported Platforms:\*\*", r"^##\s", r"^####\s"],
+        r"^###\s+Atomic Test\s+#\d+\s*:\s*.+$",
+        end_regexes=[r"^\*\*Supported Platforms:\*\*", r"^###\s", r"^####\s"],
     )
     description = (desc_text or "").strip()
 

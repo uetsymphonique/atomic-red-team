@@ -59,19 +59,33 @@ def escape_table_cell(value: Optional[str]) -> str:
 	return value.replace("\\", "&#92;")
 
 
-def render_inputs_table(input_arguments: Optional[List[Dict]]) -> str:
+def render_inputs_table(input_arguments) -> str:
 	if not input_arguments:
 		return ""
 	lines: List[str] = []
-	lines.append("#### Inputs:")
+	lines.append("#### Inputs")
+	lines.append("")
 	lines.append("| Name | Description | Type | Default Value |")
 	lines.append("|------|-------------|------|---------------|")
-	for arg in input_arguments:
-		name = escape_table_cell(arg.get("arg_name"))
-		desc = escape_table_cell(arg.get("description"))
-		typ = escape_table_cell(arg.get("type"))
-		default = escape_table_cell(arg.get("default"))
-		lines.append(f"| {name} | {desc} | {typ} | {default}|")
+	
+	# Support both dict format (ERB template) and array format (restructured)
+	if isinstance(input_arguments, dict):
+		# Dict format: {"arg_name": {"description": "...", "type": "...", "default": "..."}}
+		for arg_name, arg_meta in input_arguments.items():
+			name = escape_table_cell(arg_name)
+			desc = escape_table_cell(arg_meta.get("description") if isinstance(arg_meta, dict) else "")
+			typ = escape_table_cell(arg_meta.get("type") if isinstance(arg_meta, dict) else "")
+			default = escape_table_cell(arg_meta.get("default") if isinstance(arg_meta, dict) else "")
+			lines.append(f"| {name} | {desc} | {typ} | {default}|")
+	elif isinstance(input_arguments, list):
+		# Array format: [{"arg_name": "...", "description": "...", "type": "...", "default": "..."}]
+		for arg in input_arguments:
+			name = escape_table_cell(arg.get("arg_name"))
+			desc = escape_table_cell(arg.get("description"))
+			typ = escape_table_cell(arg.get("type"))
+			default = escape_table_cell(arg.get("default"))
+			lines.append(f"| {name} | {desc} | {typ} | {default}|")
+	
 	return "\n".join(lines) + "\n"
 
 
@@ -84,12 +98,14 @@ def render_executor_block(executor: Dict) -> str:
 
 	parts: List[str] = []
 	if name == "manual":
-		heading = "#### Run it with these steps!"
+		heading = "#### Attack Commands: Run it with these steps!"
 		if elev:
 			heading += "  Elevation Required (e.g. root or admin) "
 		parts.append(heading)
 		parts.append("")
-		parts.append(procedure.strip())
+		# Support both 'steps' and 'procedure' fields
+		steps_content = executor.get("steps") or executor.get("procedure") or ""
+		parts.append(str(steps_content).strip())
 	else:
 		heading = f"#### Attack Commands: Run with `{name}`!"
 		if elev:
@@ -98,11 +114,13 @@ def render_executor_block(executor: Dict) -> str:
 		parts.append("")
 		lang = get_language(name)
 		parts.append(f"```{lang}")
-		parts.append(procedure.strip())
+		# Support both 'command' and 'procedure' fields
+		command_content = executor.get("command") or executor.get("procedure") or ""
+		parts.append(str(command_content).strip())
 		parts.append("```")
 		if cleanup:
 			parts.append("")
-			parts.append("#### Cleanup Commands:")
+			parts.append("#### Cleanup Commands")
 			parts.append(f"```{lang}")
 			parts.append(str(cleanup).strip())
 			parts.append("```")
@@ -121,12 +139,14 @@ def render_dependencies(dependencies: Optional[List[Dict]], executor_name: str, 
 		prereq = dep.get("prereq_command", "")
 		get_prereq = dep.get("get_prereq_command")
 		parts.append(f"##### Description: {desc}")
-		parts.append("##### Check Prereq Commands:")
+		parts.append("")
+		parts.append("###### Check Prereq Commands")
 		parts.append(f"```{lang}")
 		parts.append(str(prereq).strip())
 		parts.append("```")
 		if get_prereq:
-			parts.append("##### Get Prereq Commands:")
+			parts.append("")
+			parts.append("###### Get Prereq Commands")
 			parts.append(f"```{lang}")
 			parts.append(str(get_prereq).strip())
 			parts.append("```")
@@ -159,7 +179,7 @@ def render_atomic_markdown(obj: dict) -> str:
 	out.append("")
 	# Index of tests
 	for idx, test in enumerate(atomic_tests, start=1):
-		title = f"Atomic Test #{idx} - {test.get('name', '')}"
+		title = f"Atomic Test #{idx}: {test.get('name', '')}"
 		anchor = f"#{slugify_anchor(title)}"
 		out.append(f"- [{title}]({anchor})")
 	out.append("")
@@ -167,7 +187,7 @@ def render_atomic_markdown(obj: dict) -> str:
 	for idx, test in enumerate(atomic_tests, start=1):
 		out.append("<br/>")
 		out.append("")
-		out.append(f"## Atomic Test #{idx} - {test.get('name', '')}")
+		out.append(f"### Atomic Test #{idx}: {test.get('name', '')}")
 		desc = (test.get("description") or "").strip()
 		if desc:
 			out.append(desc)
@@ -178,7 +198,7 @@ def render_atomic_markdown(obj: dict) -> str:
 		out.append("")
 		# auto_generated_guid (optional if present)
 		if "auto_generated_guid" in test and test.get("auto_generated_guid"):
-			out.append(f"**auto_generated_guid:** {test['auto_generated_guid']}")
+			out.append(f"**auto_generated_guid:** `{test['auto_generated_guid']}`")
 			out.append("")
 		# Inputs table
 		inputs_section = render_inputs_table(test.get("input_arguments"))
