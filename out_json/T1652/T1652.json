@@ -15,6 +15,62 @@
       },
       "input_arguments": {},
       "auto_generated_guid": "235b30a2-e5b1-441f-9705-be6231c88ddd"
+    },
+    {
+      "name": "Device Driver Discovery (Linux)",
+      "description": "Displays a list of loaded kernel modules on a Linux system, which is used to enumerate drivers.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "command": "lsmod"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "d57dfc9e-ed9a-418e-88f8-b59c85f8cfd1"
+    },
+    {
+      "name": "Enumerate Kernel Driver Files (Linux)",
+      "description": "Finds and lists all kernel driver files on a Linux system in order to provide a broader view of available drivers, not just loaded ones.",
+      "supported_platforms": [
+        "linux"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "command": "find /lib/modules/$(uname -r)/kernel/drivers -name \"*.ko*\""
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "13c0fef5-9be9-4d7f-9c6b-901624e53770"
+    },
+    {
+      "name": "List loaded kernel extensions (macOS)",
+      "description": "Displays a list of loaded kernel extensions (kexts) on a macOS system.",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "command": "kextstat"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "71eab73d-5d7d-4681-9a72-7873489a5b85"
+    },
+    {
+      "name": "Find Kernel Extensions (macOS)",
+      "description": "Searches for kernel extension (kext) files on a macOS system.",
+      "supported_platforms": [
+        "macos"
+      ],
+      "executor": {
+        "name": "bash",
+        "elevation_required": false,
+        "command": "kextfind"
+      },
+      "input_arguments": {},
+      "auto_generated_guid": "c63bbe52-6f17-4832-b221-f07ba8b1736f"
     }
   ]
 }

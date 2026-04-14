@@ -4,7 +4,7 @@
   "atomic_tests": [
     {
       "name": "Keychain Dump",
-      "description": "This command will dump keychain credential information from login.keychain. \nSource: https://www.loobins.io/binaries/security/\n\n### Keychain File path\n  ~/Library/Keychains/\n  /Library/Keychains/\n  /Network/Library/Keychains/\n  [Security Reference](https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man1/security.1.html)",
+      "description": "This command will dump keychain credential information from login.keychain. \nSource: https://www.loobins.io/binaries/security/",
       "supported_platforms": [
         "macos"
       ],

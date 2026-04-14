@@ -16,6 +16,31 @@
       },
       "input_arguments": {},
       "auto_generated_guid": "904a5a0e-fb02-490d-9f8d-0e256eb37549"
+    },
+    {
+      "name": "Windows - Simulate CPU Load with PowerShell",
+      "description": "This test simulates high CPU load using PowerShell, commonly seen in resource hijacking.\nSpawns background jobs to stress CPU cores for a specified duration.",
+      "supported_platforms": [
+        "windows"
+      ],
+      "executor": {
+        "name": "powershell",
+        "elevation_required": false,
+        "command": "$end = (Get-Date).AddSeconds(#{duration_seconds})\n1..#{cpu_threads} | ForEach-Object { Start-Job { param($t) while((Get-Date) -lt $t) { $i=0; while($i -lt 200000){$i++} } } -ArgumentList $end }\nGet-Job | Wait-Job | Remove-Job"
+      },
+      "input_arguments": {
+        "duration_seconds": {
+          "description": "Duration in seconds to run the CPU stress test",
+          "type": "integer",
+          "default": "30"
+        },
+        "cpu_threads": {
+          "description": "Number of threads to stress (default 4)",
+          "type": "integer",
+          "default": "4"
+        }
+      },
+      "auto_generated_guid": "44315fb0-f78d-4cef-b10f-cf21c1fe2c75"
     }
   ]
 }

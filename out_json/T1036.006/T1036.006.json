@@ -11,7 +11,7 @@
       "executor": {
         "name": "manual",
         "elevation_required": false,
-        "steps": "1. echo '#!/bin/bash\\necho \"print \\\"hello, world!\\\"\" | /usr/bin/python\\nexit' > execute.txt && chmod +x execute.txt\n\n2. mv execute.txt \"execute.txt \"\n\n3. ./execute.txt\\ \n\n\n\n\n\n\n\n<br/>\n<br/>"
+        "steps": "1. echo '#!/bin/bash\\necho \"print \\\"hello, world!\\\"\" | /usr/bin/python\\nexit' > execute.txt && chmod +x execute.txt\n\n2. mv execute.txt \"execute.txt \"\n\n3. ./execute.txt\\"
       },
       "input_arguments": {},
       "auto_generated_guid": "89a7dd26-e510-4c9f-9b15-f3bae333360f"
