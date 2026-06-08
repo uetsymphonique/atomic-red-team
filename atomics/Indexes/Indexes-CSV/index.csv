@@ -265,6 +265,12 @@ stealth,T1127.001,Trusted Developer Utilities Proxy Execution: MSBuild,2,MSBuild
 stealth,T1564.003,Hide Artifacts: Hidden Window,1,Hidden Window,f151ee37-9e2b-47e6-80e4-550b9f999b7a,powershell
 stealth,T1564.003,Hide Artifacts: Hidden Window,2,Headless Browser Accessing Mockbin,0ad9ab92-c48c-4f08-9b20-9633277c4646,command_prompt
 stealth,T1564.003,Hide Artifacts: Hidden Window,3,Hidden Window-Conhost Execution,5510d22f-2595-4911-8456-4d630c978616,powershell
+stealth,T1055.009,Process Injection: Proc Memory,1,Inplace Instruction Overwrite,50859b3b-b088-4c7b-973d-03a0365a9bf9,sh
+stealth,T1055.009,Process Injection: Proc Memory,2,Instruction Overwrite Jump,3f452c87-25b5-47c0-81d8-01908df1b927,sh
+stealth,T1055.009,Process Injection: Proc Memory,3,GOT Injection,4383bbd3-aa6c-49fd-a1a9-cf112c95982c,sh
+stealth,T1055.009,Process Injection: Proc Memory,4,Return Address Overwrite,5fabf878-7dd4-48d3-9995-408fac68e166,sh
+stealth,T1055.009,Process Injection: Proc Memory,5,ROP chain Mprotect Return Address Overwrite,3d9e332e-60c9-407a-af4c-a9ae43c4f1d0,sh
+stealth,T1055.009,Process Injection: Proc Memory,6,Return Address Overwrite for full ROP chain execution,5696f417-30e5-4942-988d-0b9dcfe3a929,sh
 stealth,T1027.006,HTML Smuggling,1,HTML Smuggling Remote Payload,30cbeda4-08d9-42f1-8685-197fad677734,powershell
 stealth,T1070.004,Indicator Removal on Host: File Deletion,1,Delete a single file - FreeBSD/Linux/macOS,562d737f-2fc6-4b09-8c2a-7f8ff0828480,sh
 stealth,T1070.004,Indicator Removal on Host: File Deletion,2,Delete an entire folder - FreeBSD/Linux/macOS,a415f17e-ce8d-4ce2-a8b4-83b674e7017e,sh
@@ -441,6 +447,7 @@ privilege-escalation,T1546.005,Event Triggered Execution: Trap,1,Trap EXIT,a74b2
 privilege-escalation,T1546.005,Event Triggered Execution: Trap,2,Trap EXIT (freebsd),be1a5d70-6865-44aa-ab50-42244c9fd16f,sh
 privilege-escalation,T1546.005,Event Triggered Execution: Trap,3,Trap SIGINT,a547d1ba-1d7a-4cc5-a9cb-8d65e8809636,sh
 privilege-escalation,T1546.005,Event Triggered Execution: Trap,4,Trap SIGINT (freebsd),ade10242-1eac-43df-8412-be0d4c704ada,sh
+privilege-escalation,T1546.005,Event Triggered Execution: Trap,5,Trap DEBUG - Log All Shell Commands,14bd90b1-c3f3-4115-9861-cf0519a59654,bash
 privilege-escalation,T1134.002,Create Process with Token,1,Access Token Manipulation,dbf4f5a9-b8e0-46a3-9841-9ad71247239e,powershell
 privilege-escalation,T1134.002,Create Process with Token,2,WinPwn - Get SYSTEM shell - Pop System Shell using Token Manipulation technique,ccf4ac39-ec93-42be-9035-90e2f26bcd92,powershell
 privilege-escalation,T1548.001,Abuse Elevation Control Mechanism: Setuid and Setgid,1,Make and modify binary from C source,896dfe97-ae43-4101-8e96-9a7996555d80,sh
@@ -580,6 +587,12 @@ privilege-escalation,T1546.002,Event Triggered Execution: Screensaver,1,Set Arbi
 privilege-escalation,T1543.001,Create or Modify System Process: Launch Agent,1,Launch Agent,a5983dee-bf6c-4eaf-951c-dbc1a7b90900,bash
 privilege-escalation,T1543.001,Create or Modify System Process: Launch Agent,2,Event Monitor Daemon Persistence,11979f23-9b9d-482a-9935-6fc9cd022c3e,bash
 privilege-escalation,T1543.001,Create or Modify System Process: Launch Agent,3,Launch Agent - Root Directory,66774fa8-c562-4bae-a58d-5264a0dd9dd7,bash
+privilege-escalation,T1055.009,Process Injection: Proc Memory,1,Inplace Instruction Overwrite,50859b3b-b088-4c7b-973d-03a0365a9bf9,sh
+privilege-escalation,T1055.009,Process Injection: Proc Memory,2,Instruction Overwrite Jump,3f452c87-25b5-47c0-81d8-01908df1b927,sh
+privilege-escalation,T1055.009,Process Injection: Proc Memory,3,GOT Injection,4383bbd3-aa6c-49fd-a1a9-cf112c95982c,sh
+privilege-escalation,T1055.009,Process Injection: Proc Memory,4,Return Address Overwrite,5fabf878-7dd4-48d3-9995-408fac68e166,sh
+privilege-escalation,T1055.009,Process Injection: Proc Memory,5,ROP chain Mprotect Return Address Overwrite,3d9e332e-60c9-407a-af4c-a9ae43c4f1d0,sh
+privilege-escalation,T1055.009,Process Injection: Proc Memory,6,Return Address Overwrite for full ROP chain execution,5696f417-30e5-4942-988d-0b9dcfe3a929,sh
 privilege-escalation,T1037.004,Boot or Logon Initialization Scripts: Rc.common,1,rc.common,97a48daa-8bca-4bc0-b1a9-c1d163e762de,bash
 privilege-escalation,T1037.004,Boot or Logon Initialization Scripts: Rc.common,2,rc.common,c33f3d80-5f04-419b-a13a-854d1cbdbf3a,bash
 privilege-escalation,T1037.004,Boot or Logon Initialization Scripts: Rc.common,3,rc.local,126f71af-e1c9-405c-94ef-26a47b16c102,sh
@@ -952,6 +965,7 @@ persistence,T1546.005,Event Triggered Execution: Trap,1,Trap EXIT,a74b2e07-5952-
 persistence,T1546.005,Event Triggered Execution: Trap,2,Trap EXIT (freebsd),be1a5d70-6865-44aa-ab50-42244c9fd16f,sh
 persistence,T1546.005,Event Triggered Execution: Trap,3,Trap SIGINT,a547d1ba-1d7a-4cc5-a9cb-8d65e8809636,sh
 persistence,T1546.005,Event Triggered Execution: Trap,4,Trap SIGINT (freebsd),ade10242-1eac-43df-8412-be0d4c704ada,sh
+persistence,T1546.005,Event Triggered Execution: Trap,5,Trap DEBUG - Log All Shell Commands,14bd90b1-c3f3-4115-9861-cf0519a59654,bash
 persistence,T1136.001,Create Account: Local Account,1,Create a user account on a Linux system,40d8eabd-e394-46f6-8785-b9bfa1d011d2,bash
 persistence,T1136.001,Create Account: Local Account,2,Create a user account on a FreeBSD system,a39ee1bc-b8c1-4331-8e5f-1859eb408518,sh
 persistence,T1136.001,Create Account: Local Account,3,Create a user account on a MacOS system,01993ba5-1da3-4e15-a719-b690d4f0f0b2,bash
